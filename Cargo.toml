@@ -1,0 +1,6 @@
+[package]
+name = "odin"
+version = "0.1.0"
+authors = ["dyakushev <DYakushev@medlinesoft.ru>"]
+
+[dependencies]
