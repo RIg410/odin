@@ -38,7 +38,7 @@ impl<'a> Transport<'a> {
     }
 
     pub fn bind<F>(self, on_msg: F) -> Result<(), ()>
-        where F: Fn((&mut Output, PublishPacket)) + Send + Sync + 'static {
+        where F: Fn((&mut Sender, PublishPacket)) + Send + Sync + 'static {
         let mut stream = TcpStream::connect(self.server_addr).unwrap();
 
         self.send_connect_packet(&mut stream);
@@ -66,8 +66,8 @@ impl<'a> Transport<'a> {
                 VariablePacket::PublishPacket(publ) => {
                     let mut stream_clone = stream.try_clone().unwrap();
                     let hndl = hndl.clone();
-                    pool.execute(move|| {
-                        hndl((&mut Output { tcp_stream: stream_clone }, publ));
+                    pool.execute(move || {
+                        hndl((&mut Sender { tcp_stream: stream_clone }, publ));
                     });
                 }
                 _ => {}
@@ -141,11 +141,11 @@ impl<'a> Transport<'a> {
     }
 }
 
-pub struct Output {
+pub struct Sender {
     tcp_stream: TcpStream,
 }
 
-impl Output {
+impl Sender {
     pub fn send(&mut self, pac: PublishPacket) -> Result<(), ()> {
         let mut buf = Vec::new();
         pac.encode(&mut buf).unwrap();
