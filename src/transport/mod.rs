@@ -1,8 +1,8 @@
-use mqtt::packet::PublishPacket;
 use mqtt::packet::*;
 use mqtt::{Decodable, Encodable, QualityOfService, TopicFilter};
-use std::str;
 use mqtt::topic_name::*;
+use mqtt::control::variable_header::ConnectReturnCode;
+
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -10,8 +10,8 @@ use std::sync::Arc;
 use std::net::TcpStream;
 use std::io::Write;
 use std::result;
+
 use threadpool::ThreadPool;
-use mqtt::control::variable_header::ConnectReturnCode;
 use time;
 use regex::Regex;
 
@@ -33,7 +33,7 @@ lazy_static! {
     };
 }
 
-pub type MsgHandler = Fn((&mut Sender, &Message)) + Send + Sync + 'static;
+type MsgHandler = Fn((&mut Sender, &Message)) + Send + Sync + 'static;
 
 //TODO rewrite using tokio)
 pub struct Mqtt<'a> {
