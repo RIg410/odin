@@ -4,3 +4,7 @@ version = "0.1.0"
 authors = ["dyakushev <DYakushev@medlinesoft.ru>"]
 
 [dependencies]
+mqtt-protocol = "*"
+lazy_static = "*"
+time = "0.1"
+threadpool="*"
