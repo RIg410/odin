@@ -33,13 +33,13 @@ lazy_static! {
     };
 }
 
-pub type MsgHandler = Fn((&mut Sender, Message)) + Send + Sync + 'static;
+pub type MsgHandler = Fn((&mut Sender, &Message)) + Send + Sync + 'static;
 
 //TODO rewrite using tokio)
 pub struct Mqtt<'a> {
     server_addr: &'a str,
     client_id: &'a str,
-    subscribes: Vec<(String, Arc<Box<MsgHandler>>)>,
+    subscribes: Vec<(String, Arc<MsgHandler>)>,
 }
 
 impl<'a> Mqtt<'a> {
@@ -47,7 +47,8 @@ impl<'a> Mqtt<'a> {
         Mqtt { server_addr, client_id, subscribes: Vec::new() }
     }
 
-    pub fn subscribe(mut self, topic: &str, on_msg: Box<MsgHandler>) -> Mqtt<'a> {
+    pub fn subscribe<F>(mut self, topic: &str, on_msg: F) -> Mqtt<'a>
+        where F: Fn((&mut Sender, &Message)) + Send + Sync + 'static {
         self.subscribes.push((topic.to_owned(), Arc::new(on_msg)));
         self
     }
@@ -77,14 +78,24 @@ impl<'a> Mqtt<'a> {
 
             match packet {
                 VariablePacket::PublishPacket(publ) => {
-                    let index = self.math_index(&pattern, publ.topic_name())?;
+                    let index = self.math_index(&pattern, publ.topic_name());
 
-                    let handler = self.subscribes[index].1.clone();
-                    let mut stream_clone = stream.try_clone().unwrap();
+                    if index.is_err() {
+                        // TODO err;
+                        continue;
+                    }
+
+                    let handler = self.subscribes[index.unwrap()].1.clone();
+                    let mut stream_clone = stream.try_clone();
+
+                    if stream_clone.is_err() {
+                        // TODO err;
+                        continue;
+                    }
 
                     pool.execute(move || {
                         let msg = Message::new(publ.topic_name(), &publ.payload()[..]);
-                        handler((&mut Sender { tcp_stream: stream_clone }, msg));
+                        handler((&mut Sender { tcp_stream: stream_clone.unwrap() }, &msg));
                     });
                 }
                 _ => {}
@@ -185,7 +196,7 @@ pub struct Message<'a> {
 }
 
 impl<'a> Message<'a> {
-    fn new<P: Into<Vec<u8>>>(topic: &'a str, payload: P) -> Message<'a> {
+    pub fn new<P: Into<Vec<u8>>>(topic: &'a str, payload: P) -> Message<'a> {
         Message { topic, payload: payload.into() }
     }
 }

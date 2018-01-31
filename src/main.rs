@@ -7,15 +7,17 @@ extern crate lazy_static;
 
 mod transport;
 
-use transport::Mqtt;
+use transport::{Mqtt, Message};
 
 fn main() {
     Mqtt::new("localhost:1883", "odin")
-        .subscribe("/+/switch/+/", Box::new(|(out, msg)| {
+        .subscribe("/+/switch/+/", |(out, msg)| {
             println!("{:?}", msg);
-        }))
-        .subscribe("/+/odin/+/", Box::new(|(msg, out)| {
-
-        }))
+            out.send(Message::new("tor", "val")).unwrap();
+        })
+        .subscribe("/+/odin/+/", |(out, msg)| {
+            println!("{:?}", msg);
+            out.send(Message::new("tor", "val_1")).unwrap();
+        })
         .run().unwrap();
 }
