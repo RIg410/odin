@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["dyakushev <DYakushev@medlinesoft.ru>"]
 
 [dependencies]
+regex = "0.2"
 mqtt-protocol = "*"
 lazy_static = "*"
 time = "0.1"
