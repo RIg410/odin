@@ -38,11 +38,11 @@ impl MessageHandler for Switch {
 
         
 
-        match body.to_lowercase() {
-            "off" => {}
-            "on" => {}
-            "toggle" => {}
-        }
+//        match body {
+//            "off" => {}
+//            "on" => {}
+//            "toggle" => {}
+//        }
 
         for id in lamp_ids {
 

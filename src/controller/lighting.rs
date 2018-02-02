@@ -1,18 +1,30 @@
 use super::Switchable;
+use std::sync::RwLock;
 
-pub struct Lighting {
+pub struct Lighting {}
 
+pub struct Spot {
+    state: RwLock<SpotState>,
 }
 
-pub struct Stop {
-
+impl Spot {
+    fn new() -> Spot {
+        Spot { state: RwLock::new(SpotState::new()) }
+    }
 }
 
-struct StopState {
-
+struct SpotState {
+    is_on: bool,
+    brightness: u8,
 }
 
-impl Switchable for Stop {
+impl SpotState {
+    fn new() -> SpotState {
+        SpotState { is_on: false, brightness: 40 }
+    }
+}
+
+impl Switchable for Spot {
     fn is_on(&self) {
         unimplemented!()
     }

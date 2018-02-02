@@ -11,7 +11,6 @@ use std::net::TcpStream;
 use std::io::Write;
 use std::result;
 use std::str;
-use std::core;
 use threadpool::ThreadPool;
 use time;
 use regex::Regex;
@@ -202,13 +201,13 @@ impl<'a> Message<'a> {
         Message { topic, payload: payload.into() }
     }
 
-    pub fn payload_as_string(&self) -> core::result::Result<&str, Option<String>> {
-        let msg = match str::from_utf8(&self.payload()[..]) {
+    pub fn payload_as_string(&self) -> result::Result<&str, String> {
+        match str::from_utf8(&self.payload[..]) {
             Ok(msg) => Ok(msg),
             Err(err) => {
                 Err(format!("Failed to decode publish message {:?}", err))
             }
-        };
+        }
     }
 }
 
