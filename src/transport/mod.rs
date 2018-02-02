@@ -10,7 +10,8 @@ use std::sync::Arc;
 use std::net::TcpStream;
 use std::io::Write;
 use std::result;
-
+use std::str;
+use std::core;
 use threadpool::ThreadPool;
 use time;
 use regex::Regex;
@@ -33,9 +34,8 @@ lazy_static! {
     };
 }
 
-type MsgHandler = Fn((&mut Sender, &Message)) + Send + Sync + 'static;
+type MsgHandler = Fn((&mut MqPublisher, &Message)) + Send + Sync + 'static;
 
-//TODO rewrite using tokio)
 pub struct Mqtt<'a> {
     server_addr: &'a str,
     client_id: &'a str,
@@ -48,7 +48,7 @@ impl<'a> Mqtt<'a> {
     }
 
     pub fn subscribe<F>(mut self, topic: &str, on_msg: F) -> Mqtt<'a>
-        where F: Fn((&mut Sender, &Message)) + Send + Sync + 'static {
+        where F: Fn((&mut MqPublisher, &Message)) + Send + Sync + 'static {
         self.subscribes.push((topic.to_owned(), Arc::new(on_msg)));
         self
     }
@@ -95,7 +95,7 @@ impl<'a> Mqtt<'a> {
 
                     pool.execute(move || {
                         let msg = Message::new(publ.topic_name(), &publ.payload()[..]);
-                        handler((&mut Sender { tcp_stream: stream_clone.unwrap() }, &msg));
+                        handler((&mut MqPublisher { tcp_stream: stream_clone.unwrap() }, &msg));
                     });
                 }
                 _ => {}
@@ -175,7 +175,6 @@ impl<'a> Mqtt<'a> {
                 let current_timestamp = time::get_time().sec;
                 if KEEP_ALIVE > 0 && current_timestamp >= next_ping_time {
                     stream_clone.write_all(&PING_PAC[..]).unwrap();
-
                     last_ping_time = current_timestamp;
                     next_ping_time = last_ping_time + (KEEP_ALIVE as f32 * 0.9) as i64;
                     thread::sleep(Duration::new((KEEP_ALIVE / 2) as u64, 0));
@@ -185,10 +184,13 @@ impl<'a> Mqtt<'a> {
     }
 }
 
-pub struct Sender {
+pub struct MqPublisher {
     tcp_stream: TcpStream,
 }
 
+/*
+/location/type/id/
+*/
 #[derive(Debug)]
 pub struct Message<'a> {
     pub topic: &'a str,
@@ -199,10 +201,19 @@ impl<'a> Message<'a> {
     pub fn new<P: Into<Vec<u8>>>(topic: &'a str, payload: P) -> Message<'a> {
         Message { topic, payload: payload.into() }
     }
+
+    pub fn payload_as_string(&self) -> core::result::Result<&str, Option<String>> {
+        let msg = match str::from_utf8(&self.payload()[..]) {
+            Ok(msg) => Ok(msg),
+            Err(err) => {
+                Err(format!("Failed to decode publish message {:?}", err))
+            }
+        };
+    }
 }
 
-impl Sender {
-    pub fn send(&mut self, pac: Message) -> Result<()> {
+impl MqPublisher {
+    pub fn publish(&mut self, pac: Message) -> Result<()> {
         let pac = PublishPacket::new(
             TopicName::new(pac.topic)?,
             QoSWithPacketIdentifier::Level0,
