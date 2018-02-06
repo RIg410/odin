@@ -1,4 +1,5 @@
-use super::Switchable;
+use super::Device;
+use controller::Mqtt;
 use std::sync::RwLock;
 
 pub struct Lighting {}
@@ -24,7 +25,7 @@ impl SpotState {
     }
 }
 
-impl Switchable for Spot {
+impl Device for Spot {
     fn is_on(&self) {
         unimplemented!()
     }
@@ -42,6 +43,14 @@ impl Switchable for Spot {
     }
 
     fn toggle(&self) {
+        unimplemented!()
+    }
+
+    fn set_state(&self) {
+        unimplemented!()
+    }
+
+    fn flush(&self, mqtt: &mut Mqtt) {
         unimplemented!()
     }
 }

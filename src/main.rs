@@ -15,14 +15,16 @@ mod configuration;
 
 use configuration::SwitchConfiguration;
 use handler::MessageHandler;
-use controller::Lighting;
+use controller::{Lighting, DeviceHolder};
 use handler::{Switch, Odin};
 use transport::{Mqtt, Message};
 
 fn main() {
+    let device_holder = Arc::new(DeviceHolder::new());
     let switch_config = Arc::new(SwitchConfiguration::new());
     let lighting = Arc::new(Lighting {});
-    let switch = Arc::new(Switch::new(lighting.clone(), switch_config.clone()));
+    let switch = Arc::new(Switch::new(device_holder.clone(), switch_config.clone()));
+
     let odin = Arc::new(Odin {});
 
     Mqtt::new("localhost:1883", "odin")

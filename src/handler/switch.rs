@@ -1,4 +1,4 @@
-use super::super::controller::Lighting;
+use controller::{Lighting, DeviceHolder};
 use std::sync::Arc;
 use super::MessageHandler;
 use super::super::transport::{MqPublisher, Message};
@@ -6,13 +6,13 @@ use super::*;
 use super::super::configuration::SwitchConfiguration as Config;
 
 pub struct Switch {
-    lighting: Arc<Lighting>,
+    device_holder: Arc<DeviceHolder>,
     config: Arc<Config>,
 }
 
 impl Switch {
-    pub fn new(lighting: Arc<Lighting>, config: Arc<Config>) -> Switch {
-        Switch { lighting, config }
+    pub fn new(device_holder: Arc<DeviceHolder>, config: Arc<Config>) -> Switch {
+        Switch { device_holder, config }
     }
 
     fn get_light_id(&self, topic: &str) -> Result<&Vec<String>, Option<String>> {
@@ -28,7 +28,6 @@ impl Switch {
             Err(Some("Failed to parse topic".to_owned()))
         }
     }
-
 }
 
 impl MessageHandler for Switch {
@@ -36,7 +35,9 @@ impl MessageHandler for Switch {
         let lamp_ids = self.get_light_id(msg.topic)?;
         let body = msg.payload_as_string().map_err(|err| Some(err))?;
 
-        
+        let v: Vec<_> = lamp_ids.iter()
+            .map(|id|{self.device_holder.get(id)})
+            .collect();
 
 //        match body {
 //            "off" => {}
@@ -44,9 +45,7 @@ impl MessageHandler for Switch {
 //            "toggle" => {}
 //        }
 
-        for id in lamp_ids {
-
-        }
+        for id in lamp_ids {}
         Ok(None)
     }
 }
