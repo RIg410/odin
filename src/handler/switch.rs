@@ -37,6 +37,10 @@ impl MessageHandler for Switch {
         let lamp_ids = self.get_light_id(msg.topic)?;
         let action = msg.payload[0];
 
+        if action < 0x01 || action > 0x03 {
+            return Err(Some(format!("Unsupported action: [{}]", action)))
+        }
+
         let devices: HashMap<&String, Option<&Box<Device>>> = lamp_ids.iter()
             .map(|id| { (id, self.device_holder.get(id)) })
             .collect();
