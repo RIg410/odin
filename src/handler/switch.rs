@@ -38,7 +38,7 @@ impl MessageHandler for Switch {
         let action = msg.payload[0];
 
         if action < 0x01 || action > 0x03 {
-            return Err(Some(format!("Unsupported action: [{}]", action)))
+            return Err(Some(format!("Unsupported action: [{}]", action)));
         }
 
         let devices: HashMap<&String, Option<&Box<Device>>> = lamp_ids.iter()
@@ -52,25 +52,37 @@ impl MessageHandler for Switch {
                 continue;
             }
 
-        let dev = dev.1.unwrap();
+            let dev = dev.1.unwrap();
             match action {
-                    0x01 /*on*/ => {
-                        dev.on();
+                0x01 /*on*/ => {
+                    if let Err(why) = dev.on() {
+                        err.push_str(&format!("Fail to on device {:?}[{:?}];", dev, why));
+                        continue;
                     }
-                    0x02 /*off*/ => {
-                        dev.off();
-                    }
-                    0x03 /*toggle*/ => {
-                        dev.toggle();
-                    }
-                    _=> {}
                 }
-                match dev.flush(publisher) {
-                    Err(why) => {
-                        err.push_str(&format!("Fail to flush device [{:?}], err=[{:?}]", dev, why));
+                0x02 /*off*/ => {
+                    if let Err(why) = dev.off() {
+                        err.push_str(&format!("Fail to off device {:?}[{:?}];", dev, why));
+                        continue;
                     }
-                    Ok(_) => {}
                 }
+                0x03 /*toggle*/ => {
+                    if let Err(why) = dev.toggle() {
+                        err.push_str(&format!("Fail to toggle device {:?}[{:?}];", dev, why));
+                        continue;
+                    }
+                }
+                a @ _ => {
+                    err.push_str(&format!("Unsupported action: [{}]", a));
+                    continue;
+                }
+            }
+            match dev.flush(publisher) {
+                Err(why) => {
+                    err.push_str(&format!("Fail to flush device [{:?}], err=[{:?}]", dev, why));
+                }
+                Ok(_) => {}
+            }
         }
 
         if err.is_empty() {

@@ -1,5 +1,5 @@
 use super::Device;
-use controller::{Mqtt, TransportError, Message};
+use controller::{Mqtt, TError, Message, ControllerError};
 use std::sync::RwLock;
 
 pub struct Lighting {}
@@ -43,33 +43,37 @@ impl SpotState {
 }
 
 impl Device for Spot {
-    fn is_on(&self) -> bool {
+    fn is_on(&self) -> Result<bool, ControllerError> {
         let state = self.state.read().unwrap();
-        state.is_on
+        Ok(state.is_on)
     }
 
-    fn is_off(&self) -> bool {
-        !self.is_on()
+    fn is_off(&self) -> Result<bool, ControllerError> {
+        self.is_on().map(|st| { !st })
     }
 
-    fn on(&self) {
+    fn on(&self) -> Result<(), ControllerError> {
         let mut state = self.state.write().unwrap();
         state.is_on = true;
+        Ok(())
     }
 
-    fn off(&self) {
+    fn off(&self) -> Result<(), ControllerError> {
         let mut state = self.state.write().unwrap();
         state.is_on = false;
+        Ok(())
     }
 
-    fn toggle(&self) {
+    fn toggle(&self) -> Result<bool, ControllerError> {
         let mut state = self.state.write().unwrap();
         state.is_on = !state.is_on;
+        Ok(state.is_on)
     }
 
-    fn flush(&self, mqtt: &mut Mqtt) -> Result<(), TransportError> {
+    fn flush(&self, mqtt: &mut Mqtt) -> Result<(), ControllerError> {
         let state = self.state.read().unwrap();
-        mqtt.publish(Message::new(&format!("/odin/spot/{}", self.id), vec!(state.payload())))
+        mqtt.publish(Message::new(&format!("/odin/spot/{}", self.id), vec!(state.payload())))?;
+        Ok(())
     }
 }
 

@@ -1,18 +1,18 @@
 mod lighting;
 
-pub use super::transport::{MqPublisher as Mqtt, TransportError, Message};
-use std::sync::{RwLock, Arc};
+pub use super::transport::{MqPublisher as Mqtt, TransportError as TError, Message};
+use std::sync::{RwLock, Arc, PoisonError};
 pub use controller::lighting::Lighting;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
 pub trait Device: Send + Sync + Debug {
-    fn is_on(&self) -> bool;
-    fn is_off(&self) -> bool;
-    fn on(&self);
-    fn off(&self);
-    fn toggle(&self);
-    fn flush(&self, mqtt: &mut Mqtt) -> Result<(), TransportError>;
+    fn is_on(&self) -> Result<bool, ControllerError>;
+    fn is_off(&self) -> Result<bool, ControllerError>;
+    fn on(&self) -> Result<(), ControllerError>;
+    fn off(&self) -> Result<(), ControllerError>;
+    fn toggle(&self) -> Result<bool, ControllerError>;
+    fn flush(&self, mqtt: &mut Mqtt) -> Result<(), ControllerError>;
 }
 
 pub struct DeviceHolder {
@@ -26,5 +26,23 @@ impl DeviceHolder {
 
     pub fn get(&self, id: &str) -> Option<&Box<Device>> {
         self.devices.get(id)
+    }
+}
+
+#[derive(Debug)]
+pub enum ControllerError {
+    GardError(String),
+    TransportError(TError),
+}
+
+impl From<TError> for ControllerError {
+    fn from(err: TError) -> ControllerError {
+        ControllerError::TransportError(err)
+    }
+}
+
+impl <T> From<PoisonError<T>> for ControllerError {
+    fn from(err: PoisonError<T>) -> ControllerError {
+        ControllerError::GardError(err.to_string())
     }
 }
