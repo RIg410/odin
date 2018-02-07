@@ -1,18 +1,19 @@
 mod lighting;
 
-pub use super::transport::MqPublisher as Mqtt;
+pub use super::transport::{MqPublisher as Mqtt, TransportError};
 use std::sync::{RwLock, Arc};
 pub use controller::lighting::Lighting;
 use std::collections::HashMap;
+use std::fmt::Debug;
 
-pub trait Device: Send + Sync {
+pub trait Device: Send + Sync + Debug {
     fn is_on(&self);
     fn is_off(&self);
     fn on(&self);
     fn off(&self);
     fn toggle(&self);
     fn set_state(&self);
-    fn flush(&self, mqtt: &mut Mqtt);
+    fn flush(&self, mqtt: &mut Mqtt) -> Result<(), TransportError>;
 }
 
 pub struct DeviceHolder {

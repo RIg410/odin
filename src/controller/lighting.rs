@@ -1,9 +1,10 @@
 use super::Device;
-use controller::Mqtt;
+use controller::{Mqtt, TransportError};
 use std::sync::RwLock;
 
 pub struct Lighting {}
 
+#[derive(Debug)]
 pub struct Spot {
     state: RwLock<SpotState>,
 }
@@ -14,6 +15,7 @@ impl Spot {
     }
 }
 
+#[derive(Debug)]
 struct SpotState {
     is_on: bool,
     brightness: u8,
@@ -27,6 +29,7 @@ impl SpotState {
 
 impl Device for Spot {
     fn is_on(&self) {
+        self.state.re
         unimplemented!()
     }
 
@@ -50,7 +53,7 @@ impl Device for Spot {
         unimplemented!()
     }
 
-    fn flush(&self, mqtt: &mut Mqtt) {
+    fn flush(&self, mqtt: &mut Mqtt) -> Result<(), TransportError> {
         unimplemented!()
     }
 }

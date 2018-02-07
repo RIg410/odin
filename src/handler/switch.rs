@@ -1,9 +1,11 @@
 use controller::{Lighting, DeviceHolder};
 use std::sync::Arc;
+use std::collections::HashMap;
+use controller::Device;
 use super::MessageHandler;
-use super::super::transport::{MqPublisher, Message};
+use transport::{MqPublisher, Message};
 use super::*;
-use super::super::configuration::SwitchConfiguration as Config;
+use configuration::SwitchConfiguration as Config;
 
 pub struct Switch {
     device_holder: Arc<DeviceHolder>,
@@ -33,19 +35,44 @@ impl Switch {
 impl MessageHandler for Switch {
     fn handel(&self, msg: &Message, publisher: &mut MqPublisher) -> Result<Option<String>, Option<String>> {
         let lamp_ids = self.get_light_id(msg.topic)?;
-        let body = msg.payload_as_string().map_err(|err| Some(err))?;
+        let action = msg.payload[0];
 
-        let v: Vec<_> = lamp_ids.iter()
-            .map(|id|{self.device_holder.get(id)})
+        let devices: HashMap<&String, Option<&Box<Device>>> = lamp_ids.iter()
+            .map(|id| { (id, self.device_holder.get(id)) })
             .collect();
 
-//        match body {
-//            "off" => {}
-//            "on" => {}
-//            "toggle" => {}
-//        }
+        let mut err = String::new();
+        for dev in devices {
+            if !dev.1.is_some() {
+                err.push_str(&format!("Device with id = {} not fount;", dev.0));
+                continue;
+            }
 
-        for id in lamp_ids {}
-        Ok(None)
+        let dev = dev.1.unwrap();
+            match action {
+                    0x01 /*on*/ => {
+                        dev.on();
+                    }
+                    0x02 /*off*/ => {
+                        dev.off();
+                    }
+                    0x03 /*toggle*/ => {
+                        dev.toggle();
+                    }
+                    _=> {}
+                }
+                match dev.flush(publisher) {
+                    Err(why) => {
+                        err.push_str(&format!("Fail to flush device [{:?}], err=[{:?}]", dev, why));
+                    }
+                    Ok(_) => {}
+                }
+        }
+
+        if err.is_empty() {
+            Ok(None)
+        } else {
+            Err(Some(err))
+        }
     }
 }
