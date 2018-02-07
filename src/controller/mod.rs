@@ -7,8 +7,8 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 
 pub trait Device: Send + Sync + Debug {
-    fn is_on(&self);
-    fn is_off(&self);
+    fn is_on(&self) -> bool;
+    fn is_off(&self) -> bool;
     fn on(&self);
     fn off(&self);
     fn toggle(&self);

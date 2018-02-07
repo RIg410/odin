@@ -29,7 +29,7 @@ impl SpotState {
 
 impl Device for Spot {
     fn is_on(&self) {
-        //self.state.re
+        self.state.rea
         unimplemented!()
     }
 
