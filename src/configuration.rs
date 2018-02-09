@@ -1,21 +1,24 @@
 use std::collections::HashMap;
+use controller::{Device, Switch};
+use std::sync::Arc;
 
 pub struct SwitchConfiguration {
-    switch_map: HashMap<String, Vec<String>>
+    switch_map: HashMap<String, Arc<Switch>>
 }
 
 impl SwitchConfiguration {
-    pub fn new() -> SwitchConfiguration {
-        let mut map = HashMap::new();
-        map.insert("switch_1".to_owned(), vec!("spot_1".to_owned(), "spot_2".to_owned()));
-
-
+    pub fn new(switch_vec: Vec<Arc<Switch>>) -> SwitchConfiguration {
         SwitchConfiguration {
-            switch_map: map
+            switch_map : switch_vec.iter()
+            .map( | switch| {(switch.id.to_owned(), switch.clone())})
+            .collect()
         }
     }
 
-    pub fn get_lights_ids(&self, switch_id : &str) -> Option<&Vec<String>> {
-        self.switch_map.get(switch_id)
+    pub fn get_switch(&self, switch_id : &str) -> Option<&Switch> {
+       match self.switch_map.get(switch_id) {
+           Some(sw) => Some(sw.as_ref()),
+           None => None
+       }
     }
 }

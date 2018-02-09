@@ -1,8 +1,9 @@
 mod lighting;
-
+mod switch;
 pub use super::transport::{MqPublisher as Mqtt, TransportError as TError, Message};
 use std::sync::{RwLock, Arc, PoisonError};
-pub use controller::lighting::Lighting;
+pub use controller::lighting::{Lighting, Spot};
+pub use controller::switch::Switch;
 use std::collections::HashMap;
 use std::fmt::Debug;
 

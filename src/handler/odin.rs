@@ -1,5 +1,6 @@
 use super::MessageHandler;
 use transport::{Message, MqPublisher};
+
 pub struct Odin {
 
 }

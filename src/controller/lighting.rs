@@ -11,7 +11,7 @@ pub struct Spot {
 }
 
 impl Spot {
-    fn new(id: &str) -> Spot {
+    pub fn new(id: &str) -> Spot {
         Spot { id: id.to_owned(), state: RwLock::new(SpotState::new()) }
     }
 }
@@ -72,7 +72,7 @@ impl Device for Spot {
 
     fn flush(&self, mqtt: &mut Mqtt) -> Result<(), ControllerError> {
         let state = self.state.read().unwrap();
-        mqtt.publish(Message::new(&format!("/odin/spot/{}", self.id), vec!(state.payload())))?;
+        mqtt.publish(Message::new(&format!("/odin/spot/{}/", self.id), vec!(state.payload())))?;
         Ok(())
     }
 }

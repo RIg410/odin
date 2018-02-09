@@ -1,7 +1,7 @@
 mod switch;
 mod odin;
 
-pub use self::switch::Switch;
+pub use self::switch::SwitchHandler;
 pub use self::odin::Odin;
 use super::transport::MqPublisher;
 use super::transport::Message;
