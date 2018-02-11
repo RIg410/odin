@@ -1,6 +1,8 @@
 mod switch;
 mod odin;
+mod leaks;
 
+pub use self::leaks::LeakHandler;
 pub use self::switch::SwitchHandler;
 pub use self::odin::Odin;
 use super::transport::MqPublisher;

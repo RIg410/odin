@@ -18,7 +18,7 @@ mod configuration;
 
 use configuration::SwitchConfiguration;
 use handler::MessageHandler;
-use controller::{Lighting, DeviceHolder, Spot, Switch};
+use controller::{DeviceHolder, Spot, Switch, Tap};
 use handler::{SwitchHandler, Odin};
 use transport::{Mqtt, Message};
 
@@ -29,13 +29,17 @@ fn main() {
     let spot_4 = Arc::new(Spot::new("spot_4"));
     let spot_5 = Arc::new(Spot::new("spot_5"));
 
-
     let switch_1 = Arc::new(Switch::new("switch_1", vec!(spot_1.clone(), spot_2.clone())));
     let switch_2 = Arc::new(Switch::new("switch_2", vec!(spot_3.clone(), spot_4.clone())));
     let switch_3 = Arc::new(Switch::new("switch_3", vec!(spot_5.clone())));
 
+    let cold_water = Arc::new(Tap::new("cold_water"));
+    let hot_water = Arc::new(Tap::new("hot_water"));
+    let reverse_water = Arc::new(Tap::new("reverse_water"));
+    let leak_sensor = Arc::new(Switch::new("leak_sensor", vec!(cold_water.clone(), hot_water.clone(), reverse_water.clone())));
+    let leak_sensor_config = Arc::new(SwitchConfiguration::new(vec!(leak_sensor.clone())));
+
     let switch_config = Arc::new(SwitchConfiguration::new(vec!(switch_1.clone(), switch_2.clone(), switch_3.clone())));
-    let lighting = Arc::new(Lighting {});
     let switch = Arc::new(SwitchHandler::new(switch_config.clone()));
 
     let odin = Arc::new(Odin {});
@@ -45,7 +49,7 @@ fn main() {
             let switch = switch.clone();
             switch.on_message(msg, out);
         })
-        .subscribe("/freya/update/odin/", move |(out, msg)| {
+        .subscribe("/+/leak_sensor/+/", move |(out, msg)| {
             odin.on_message(msg, out);
         })
         .run().unwrap();

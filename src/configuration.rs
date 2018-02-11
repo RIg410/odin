@@ -22,3 +22,8 @@ impl SwitchConfiguration {
        }
     }
 }
+
+pub struct LeakSensorConfig {
+    leak_sensor_map: HashMap<String, Arc<Switch>>
+
+}

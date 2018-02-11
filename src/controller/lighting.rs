@@ -2,8 +2,6 @@ use super::Device;
 use controller::{Mqtt, TError, Message, ControllerError};
 use std::sync::RwLock;
 
-pub struct Lighting {}
-
 #[derive(Debug)]
 pub struct Spot {
     id: String,

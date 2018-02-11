@@ -7,13 +7,13 @@ use transport::{MqPublisher, Message};
 use super::*;
 use configuration::SwitchConfiguration as Config;
 
-pub struct SwitchHandler {
+pub struct LeakHandler {
     config: Arc<Config>,
 }
 
-impl SwitchHandler {
-    pub fn new(config: Arc<Config>) -> SwitchHandler {
-        SwitchHandler { config }
+impl LeakHandler {
+    pub fn new(config: Arc<Config>) -> LeakHandler {
+        LeakHandler { config }
     }
 
     fn get_switch(&self, topic: &str) -> Result<&Switch, Option<String>> {
@@ -31,33 +31,27 @@ impl SwitchHandler {
     }
 }
 
-impl MessageHandler for SwitchHandler {
+impl MessageHandler for LeakHandler {
     fn handel(&self, msg: &Message, publisher: &mut MqPublisher) -> Result<Option<String>, Option<String>> {
         let switch = self.get_switch(msg.topic)?;
         let action = msg.payload[0];
 
-        if action < 0x01 || action > 0x03 {
+        if action < 0x00 || action > 0x01 {
             return Err(Some(format!("Unsupported action: [{}]", action)));
         }
 
         let mut err = String::new();
         for dev in &switch.devices {
             match action {
-                0x01 /*on*/ => {
+                0x00 /*no leaks found*/ => {
                     if let Err(why) = dev.on() {
                         err.push_str(&format!("Fail to on device {:?}[{:?}];", dev, why));
                         continue;
                     }
                 }
-                0x02 /*off*/ => {
+                0x01 /*found the leak*/ => {
                     if let Err(why) = dev.off() {
                         err.push_str(&format!("Fail to off device {:?}[{:?}];", dev, why));
-                        continue;
-                    }
-                }
-                0x03 /*toggle*/ => {
-                    if let Err(why) = dev.toggle() {
-                        err.push_str(&format!("Fail to toggle device {:?}[{:?}];", dev, why));
                         continue;
                     }
                 }
@@ -66,6 +60,7 @@ impl MessageHandler for SwitchHandler {
                     continue;
                 }
             }
+
             match dev.flush(publisher) {
                 Err(why) => {
                     err.push_str(&format!("Fail to flush device [{:?}], err=[{:?}]", dev, why));
@@ -75,7 +70,11 @@ impl MessageHandler for SwitchHandler {
         }
 
         if err.is_empty() {
-            Ok(None)
+            if action == 0x01 {
+               Ok("Water leaks found!")
+            } else {
+                Ok(None)
+            }
         } else {
             Err(Some(err))
         }
