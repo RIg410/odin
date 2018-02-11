@@ -71,7 +71,7 @@ impl MessageHandler for LeakHandler {
 
         if err.is_empty() {
             if action == 0x01 {
-               Ok("Water leaks found!")
+               Ok(Some("Water leaks found!".to_owned()))
             } else {
                 Ok(None)
             }
