@@ -187,9 +187,6 @@ pub struct MqPublisher {
     tcp_stream: TcpStream,
 }
 
-/*
-/location/type/id/
-*/
 #[derive(Debug)]
 pub struct Message<'a> {
     pub topic: &'a str,

@@ -1,11 +1,10 @@
-use controller::{ DeviceHolder, Switch};
+use controller::Switch;
 use std::sync::Arc;
-use std::collections::HashMap;
-use controller::Device;
 use super::MessageHandler;
 use transport::{MqPublisher, Message};
 use super::*;
 use configuration::SwitchConfiguration as Config;
+use controller::Device;
 
 pub struct LeakHandler {
     config: Arc<Config>,
@@ -17,7 +16,7 @@ impl LeakHandler {
     }
 
     fn get_switch(&self, topic: &str) -> Result<&Switch, Option<String>> {
-        let switch_id = parse_sender(topic);
+        let switch_id = parse_id(topic);
         if let Some(id) = switch_id {
             let switch = self.config.get_switch(id);
             if let Some(switch) = switch {
@@ -41,7 +40,7 @@ impl MessageHandler for LeakHandler {
         }
 
         let mut err = String::new();
-        for dev in &switch.devices {
+        for dev in switch.devices() {
             match action {
                 0x00 /*no leaks found*/ => {
                     if let Err(why) = dev.on() {

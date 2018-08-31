@@ -5,7 +5,6 @@ extern crate regex;
 #[macro_use]
 extern crate lazy_static;
 extern crate chrono;
-#[macro_use(bson, doc)]
 extern crate bson;
 extern crate mongodb;
 
@@ -18,39 +17,40 @@ mod configuration;
 
 use configuration::SwitchConfiguration;
 use handler::MessageHandler;
-use controller::{DeviceHolder, Spot, Switch, Tap};
-use handler::{SwitchHandler, Odin};
-use transport::{Mqtt, Message};
+use controller::{Spot, Switch};
+use handler::SwitchHandler;
+use transport::Mqtt;
 
 fn main() {
-    let spot_1 = Arc::new(Spot::new("spot_1"));
-    let spot_2 = Arc::new(Spot::new("spot_2"));
-    let spot_3 = Arc::new(Spot::new("spot_3"));
-    let spot_4 = Arc::new(Spot::new("spot_4"));
-    let spot_5 = Arc::new(Spot::new("spot_5"));
+    let corridor_lamp = Spot::new("corridor_lamp");
+    let toilet_spot = Spot::new("toilet");
+    let bathroom_spot = Spot::new("bathroom");
+    let bedroom_lamp = Spot::new("bedroom_lamp");
+    let lounge_lamp = Spot::new("lounge_lamp");
+    let kitchen_lamp = Spot::new("kitchen_lamp");
 
-    let switch_1 = Arc::new(Switch::new("switch_1", vec!(spot_1.clone(), spot_2.clone())));
-    let switch_2 = Arc::new(Switch::new("switch_2", vec!(spot_3.clone(), spot_4.clone())));
-    let switch_3 = Arc::new(Switch::new("switch_3", vec!(spot_5.clone())));
+    let switch_list = vec![
+        Switch::new("corridor_1", vec![Box::new(corridor_lamp.clone())]),
+        Switch::new("corridor_2", vec![]),
+        Switch::new("toilet", vec![Box::new(toilet_spot.clone())]),
+        Switch::new("bathroom", vec![Box::new(bathroom_spot.clone())]),
+        Switch::new("bedroom_1", vec![Box::new(bedroom_lamp.clone())]),
+        Switch::new("bedroom_2", vec![]),
+        Switch::new("lounge_1", vec![Box::new(lounge_lamp.clone())]),
+        Switch::new("lounge_2", vec![]),
+        Switch::new("kitchen_1", vec![Box::new(kitchen_lamp.clone())]),
+        Switch::new("kitchen_2", vec![]),
+        Switch::new("balcony_1", vec![]),
+        Switch::new("balcony_2", vec![])
+    ];
 
-    let cold_water = Arc::new(Tap::new("cold_water"));
-    let hot_water = Arc::new(Tap::new("hot_water"));
-    let reverse_water = Arc::new(Tap::new("reverse_water"));
-    let leak_sensor = Arc::new(Switch::new("leak_sensor", vec!(cold_water.clone(), hot_water.clone(), reverse_water.clone())));
-    let leak_sensor_config = Arc::new(SwitchConfiguration::new(vec!(leak_sensor.clone())));
-
-    let switch_config = Arc::new(SwitchConfiguration::new(vec!(switch_1.clone(), switch_2.clone(), switch_3.clone())));
+    let switch_config = Arc::new(SwitchConfiguration::new(switch_list));
     let switch = Arc::new(SwitchHandler::new(switch_config.clone()));
 
-    let odin = Arc::new(Odin {});
-
-    Mqtt::new("localhost:1883", "odin")
-        .subscribe("/+/switch/+/", move |(out, msg)| {
+    Mqtt::new("192.168.1.137:1883", "odin")
+        .subscribe("/switch/+", move |(out, msg)| {
             let switch = switch.clone();
             switch.on_message(msg, out);
-        })
-        .subscribe("/+/leak_sensor/+/", move |(out, msg)| {
-            odin.on_message(msg, out);
         })
         .run().unwrap();
 }

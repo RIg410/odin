@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicBool, Ordering};
-use controller::{Device, Mqtt, TError, Message, ControllerError};
+use controller::{Device, Mqtt, Message, ControllerError};
 
 #[derive(Debug)]
 pub struct Tap {

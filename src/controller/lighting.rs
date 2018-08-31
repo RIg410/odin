@@ -1,16 +1,23 @@
 use super::Device;
-use controller::{Mqtt, TError, Message, ControllerError};
+use controller::{Mqtt, Message, ControllerError};
+use std::sync::Arc;
 use std::sync::RwLock;
 
 #[derive(Debug)]
 pub struct Spot {
-    id: String,
-    state: RwLock<SpotState>,
+    id: Arc<String>,
+    state: Arc<RwLock<SpotState>>,
 }
 
 impl Spot {
     pub fn new(id: &str) -> Spot {
-        Spot { id: id.to_owned(), state: RwLock::new(SpotState::new()) }
+        Spot { id: Arc::new(id.to_owned()), state: Arc::new(RwLock::new(SpotState::new())) }
+    }
+}
+
+impl Clone for Spot {
+    fn clone(&self) -> Self {
+        Spot { id: self.id.clone(), state: self.state.clone() }
     }
 }
 
@@ -70,7 +77,7 @@ impl Device for Spot {
 
     fn flush(&self, mqtt: &mut Mqtt) -> Result<(), ControllerError> {
         let state = self.state.read().unwrap();
-        mqtt.publish(Message::new(&format!("/odin/spot/{}/", self.id), vec!(state.payload())))?;
+        mqtt.publish(Message::new(&format!("/spot/{}", self.id), vec!(state.payload())))?;
         Ok(())
     }
 }

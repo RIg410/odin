@@ -1,36 +1,15 @@
 mod switch;
-mod odin;
 mod leaks;
 
 pub use self::leaks::LeakHandler;
 pub use self::switch::SwitchHandler;
-pub use self::odin::Odin;
 use super::transport::MqPublisher;
 use super::transport::Message;
 use chrono::prelude::*;
-use std::fmt::Debug;
 
 const LOG_TOPIC: &str = "/odin/log/heimdallr/";
 
-pub fn parse_receiver<'a>(topic: &'a str) -> Option<&'a str> {
-    let mut to = -1;
-    let mut from = -1;
-    for (i, c) in topic.char_indices().rev() {
-        if to == -1 && c == '/' {
-            to = i as i32;
-            continue;
-        }
-        if from == -1 && c == '/' {
-            from = (i as i32) + 1;
-            break;
-        }
-    }
-
-    sub_str(topic, from, to)
-}
-
-pub fn parse_type<'a>(topic: &'a str) -> Option<&'a str> {
-    let mut to = -1;
+pub fn parse_id(topic: &str) -> Option<&str> {
     let mut from = -2;
     for (i, c) in topic.char_indices() {
         if from == -2 && c == '/' {
@@ -39,35 +18,14 @@ pub fn parse_type<'a>(topic: &'a str) -> Option<&'a str> {
         }
         if from == -1 && c == '/' {
             from = (i as i32) + 1;
-            continue;
-        }
-        if to == -1 && c == '/' {
-            to = i as i32;
             break;
         }
     }
-
-    sub_str(topic, from, to)
+    sub_str(topic, from, topic.len() as i32)
 }
 
-pub fn parse_sender<'a>(topic: &'a str) -> Option<&'a str> {
-    let mut to = -1;
-    let mut from = -1;
-    for (i, c) in topic.char_indices() {
-        if from == -1 && c == '/' {
-            from = (i as i32) + 1;
-            continue;
-        }
-        if to == -1 && c == '/' {
-            to = i as i32;
-            break;
-        }
-    }
-
-    sub_str(topic, from, to)
-}
-
-fn sub_str<'a>(s: &'a str, from: i32, to: i32) -> Option<&'a str> {
+#[inline]
+fn sub_str(s: &str, from: i32, to: i32) -> Option<&str> {
     if from < 0 || to < 0 || from > to {
         None
     } else {
@@ -107,23 +65,8 @@ mod test {
     use super::*;
 
     #[test]
-    fn parse_receiver_test() {
-        assert_eq!(Some("id_1"), parse_receiver("/i1/switch/id_1/"));
-        assert_eq!(Some(""), parse_receiver("/i1/switch//"));
-        assert_eq!(None, parse_receiver("roomswitch/"))
-    }
-
-    #[test]
     fn test_parse_location() {
-        assert_eq!(Some("r_1"), parse_sender("/r_1/switch/id_1/"));
-        assert_eq!(Some("r"), parse_sender("/r/switch//"));
-        assert_eq!(None, parse_sender("roomswitch/"))
-    }
-
-    #[test]
-    fn test_parse_type() {
-        assert_eq!(Some("switch"), parse_type("/r_1/switch/id_1/"));
-        assert_eq!(Some("log"), parse_type("/r/log//"));
-        assert_eq!(None, parse_type("roomswitch/"))
+        assert_eq!(Some("corridor_1"), parse_id("/switch/corridor_1"));
+        assert_eq!(Some("corridor"), parse_id("/switch/corridor"));
     }
 }

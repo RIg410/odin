@@ -3,7 +3,7 @@ mod switch;
 mod tap;
 
 pub use super::transport::{MqPublisher as Mqtt, TransportError as TError, Message};
-use std::sync::{RwLock, Arc, PoisonError};
+use std::sync::PoisonError;
 pub use controller::lighting::Spot;
 pub use controller::tap::Tap;
 pub use controller::switch::Switch;
