@@ -38,6 +38,7 @@ impl MessageHandler for LeakHandler {
         if action < 0x00 || action > 0x01 {
             return Err(Some(format!("Unsupported action: [{}]", action)));
         }
+
         let mut err = String::new();
         for dev in switch.devices() {
             match action {
