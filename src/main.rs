@@ -67,7 +67,7 @@ fn main() {
                 switch.on_message(msg, out);
             })
             .subscribe("/odin/ping", move |(out, msg)| {
-                out.publish(Message::new("/odin/pong", ""));
+                out.publish(Message::new("/odin/pong", msg.payload.to_owned()));
             })
             .run() {
             println!("Failed to start:{:?}", err);
