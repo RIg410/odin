@@ -26,6 +26,7 @@ use handler::MessageHandler;
 use controller::{Spot, Switch, SerialDimmer, SerialSpot};
 use handler::SwitchHandler;
 use transport::Mqtt;
+use transport::Message;
 
 fn main() {
     dotenv().ok();
@@ -65,8 +66,8 @@ fn main() {
             .subscribe("/switch/+", move |(out, msg)| {
                 switch.on_message(msg, out);
             })
-            .subscribe("/dimmer/+", move |(out, msg)| {
-
+            .subscribe("/odin/ping", move |(out, msg)| {
+                out.publish(Message::new("/odin/pong", ""));
             })
             .run() {
             println!("Failed to start:{:?}", err);
