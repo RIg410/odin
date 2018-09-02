@@ -1,3 +1,5 @@
+extern crate serial;
+extern crate dotenv;
 extern crate mqtt;
 extern crate time;
 extern crate threadpool;
@@ -6,15 +8,19 @@ extern crate regex;
 extern crate lazy_static;
 extern crate chrono;
 extern crate bson;
-extern crate mongodb;
+
+use dotenv::dotenv;
 
 use std::sync::Arc;
+use std::env;
 
 mod transport;
 mod controller;
 mod handler;
 mod configuration;
+mod serial_channel;
 
+use serial_channel::SerialChannel;
 use configuration::SwitchConfiguration;
 use handler::MessageHandler;
 use controller::{Spot, Switch};
@@ -22,6 +28,11 @@ use handler::SwitchHandler;
 use transport::Mqtt;
 
 fn main() {
+    dotenv().ok();
+
+    let channel = SerialChannel::new();
+    channel.send(serial_channel::Cmd::new(0x01, 0x03, 0x020));
+
     let corridor_lamp = Spot::new("corridor_lamp");
     let toilet_spot = Spot::new("toilet");
     let bathroom_spot = Spot::new("bathroom");
@@ -46,11 +57,18 @@ fn main() {
 
     let switch_config = Arc::new(SwitchConfiguration::new(switch_list));
     let switch = Arc::new(SwitchHandler::new(switch_config.clone()));
-
-    Mqtt::new("192.168.1.137:1883", "odin")
-        .subscribe("/switch/+", move |(out, msg)| {
-            let switch = switch.clone();
-            switch.on_message(msg, out);
-        })
-        .run().unwrap();
+//
+//    loop {
+//        let switch = switch.clone();
+//        let mq = env::var("MQTT").unwrap_or("localhost:1883".to_owned());
+//        println!("connect to MQTT: {}", mq);
+//        if let Err(err) = Mqtt::new(&mq, "odin")
+//            .subscribe("/switch/+", move |(out, msg)| {
+//                switch.on_message(msg, out);
+//            }).run() {
+//            println!("Failed to start:{:?}", err);
+//        }
+//
+//        std::thread::sleep_ms(2000);
+//    }
 }

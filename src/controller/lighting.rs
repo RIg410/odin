@@ -82,6 +82,11 @@ impl Device for Spot {
     }
 }
 
+#[derive(Debug)]
+pub struct SerialSpot {
+
+}
+
 #[test]
 fn test_spot_state() {
     let spot = SpotState { is_on: false, brightness: 40 };
