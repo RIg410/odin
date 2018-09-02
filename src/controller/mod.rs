@@ -4,7 +4,7 @@ mod tap;
 
 pub use super::transport::{MqPublisher as Mqtt, TransportError as TError, Message};
 use std::sync::PoisonError;
-pub use controller::lighting::Spot;
+pub use controller::lighting::{Spot, SerialSpot};
 pub use controller::tap::Tap;
 pub use controller::switch::Switch;
 use std::collections::HashMap;
@@ -45,7 +45,7 @@ impl From<TError> for ControllerError {
     }
 }
 
-impl <T> From<PoisonError<T>> for ControllerError {
+impl<T> From<PoisonError<T>> for ControllerError {
     fn from(err: PoisonError<T>) -> ControllerError {
         ControllerError::GardError(err.to_string())
     }

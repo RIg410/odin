@@ -23,7 +23,7 @@ mod serial_channel;
 use serial_channel::SerialChannel;
 use configuration::SwitchConfiguration;
 use handler::MessageHandler;
-use controller::{Spot, Switch};
+use controller::{Spot, Switch, SerialSpot};
 use handler::SwitchHandler;
 use transport::Mqtt;
 
@@ -31,12 +31,12 @@ fn main() {
     dotenv().ok();
     let channel = SerialChannel::new();
 
-    let corridor_lamp = Spot::new("corridor_lamp");
-    let toilet_spot = Spot::new("toilet");
-    let bathroom_spot = Spot::new("bathroom");
+    let corridor_lamp = SerialSpot::new("corridor_lamp", 0x01, channel.clone());
+    let toilet_spot = SerialSpot::new("toilet", 0x02, channel.clone());
+    let bathroom_spot = SerialSpot::new("bathroom", 0x03, channel.clone());
     let bedroom_lamp = Spot::new("bedroom_lamp");
     let lounge_lamp = Spot::new("lounge_lamp");
-    let kitchen_lamp = Spot::new("kitchen_lamp");
+    let kitchen_lamp = SerialSpot::new("kitchen_lamp", 0x04, channel.clone());
 
     let switch_list = vec![
         Switch::new("corridor_1", vec![Box::new(corridor_lamp.clone())]),
