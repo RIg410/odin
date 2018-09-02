@@ -29,9 +29,7 @@ use transport::Mqtt;
 
 fn main() {
     dotenv().ok();
-
     let channel = SerialChannel::new();
-    channel.send(serial_channel::Cmd::new(0x01, 0x03, 0x020));
 
     let corridor_lamp = Spot::new("corridor_lamp");
     let toilet_spot = Spot::new("toilet");
@@ -57,18 +55,18 @@ fn main() {
 
     let switch_config = Arc::new(SwitchConfiguration::new(switch_list));
     let switch = Arc::new(SwitchHandler::new(switch_config.clone()));
-//
-//    loop {
-//        let switch = switch.clone();
-//        let mq = env::var("MQTT").unwrap_or("localhost:1883".to_owned());
-//        println!("connect to MQTT: {}", mq);
-//        if let Err(err) = Mqtt::new(&mq, "odin")
-//            .subscribe("/switch/+", move |(out, msg)| {
-//                switch.on_message(msg, out);
-//            }).run() {
-//            println!("Failed to start:{:?}", err);
-//        }
-//
-//        std::thread::sleep_ms(2000);
-//    }
+
+    loop {
+        let switch = switch.clone();
+        let mq = env::var("MQTT").unwrap_or("localhost:1883".to_owned());
+        println!("connect to MQTT: {}", mq);
+        if let Err(err) = Mqtt::new(&mq, "odin")
+            .subscribe("/switch/+", move |(out, msg)| {
+                switch.on_message(msg, out);
+            }).run() {
+            println!("Failed to start:{:?}", err);
+        }
+
+        std::thread::sleep_ms(2000);
+    }
 }
