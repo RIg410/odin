@@ -31,10 +31,9 @@ use transport::Message;
 fn main() {
     dotenv().ok();
     let channel = SerialChannel::new();
-
-    let corridor_lamp = SerialDimmer::new("corridor_lamp", 0x01, channel.clone());
+    let bathroom_spot = SerialDimmer::new("bathroom", 0x01, channel.clone());
+    let corridor_lamp = SerialDimmer::new("corridor_lamp", 0x03, channel.clone());
     let toilet_spot = SerialDimmer::new("toilet", 0x02, channel.clone());
-    let bathroom_spot = SerialDimmer::new("bathroom", 0x03, channel.clone());
     let kitchen_lamp = SerialDimmer::new("kitchen_lamp", 0x04, channel.clone());
 
     let bedroom_lamp = SerialSpot::new("bedroom_lamp", 0x01, channel.clone());
