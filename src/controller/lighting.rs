@@ -6,9 +6,6 @@ use serial_channel::{SerialChannel, Cmd};
 use transport::MqPublisher;
 use std::fmt;
 
-const MIN: u8 = 1;
-const MAX: u8 = 80;
-
 #[derive(Debug)]
 pub struct Spot {
     id: Arc<String>,
@@ -144,13 +141,9 @@ impl Device for SerialDimmer {
     fn flush(&self, _: &mut MqPublisher) -> Result<(), ControllerError> {
         let state = self.state.read().unwrap();
         let arg = if state.is_on {
-            if state.brightness == 0 {
-                0x00
-            } else {
-                map(100 - state.brightness, 0, 100, 1, 80)
-            }
+            invert_and_map(state.brightness)
         } else {
-            0x00
+            255
         };
 
         self.channel.send(Cmd::new(0x01, self.p_id, arg));
@@ -158,7 +151,17 @@ impl Device for SerialDimmer {
     }
 }
 
-fn map(x: u8, in_min: u8, in_max: u8, out_min: u8, out_max: u8) -> u8 {
+#[inline]
+fn invert_and_map(val: u8) -> u8 {
+    if val == 0 {
+         255
+    } else {
+        map(100 - val as u32, 0, 100, 26, 229) as u8
+    }
+}
+
+#[inline]
+fn map(x: u32, in_min: u32, in_max: u32, out_min: u32, out_max: u32) -> u32 {
     (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 }
 
@@ -227,7 +230,6 @@ impl fmt::Debug for SerialSpot {
     }
 }
 
-
 #[test]
 fn test_spot_state() {
     let spot = SpotState { is_on: false, brightness: 40 };
@@ -238,4 +240,20 @@ fn test_spot_state() {
 
     let spot = SpotState { is_on: true, brightness: 0 };
     assert_eq!(spot, SpotState::from_byte(spot.payload()));
+}
+
+#[test]
+fn test_dimmer() {
+    assert_eq!(255, invert_and_map(0));
+    assert_eq!(226, invert_and_map(1));
+    assert_eq!(224, invert_and_map(2));
+    assert_eq!(208, invert_and_map(10));
+    assert_eq!(188, invert_and_map(20));
+    assert_eq!(147, invert_and_map(40));
+    assert_eq!(127, invert_and_map(50));
+    assert_eq!(107, invert_and_map(60));
+    assert_eq!(86, invert_and_map(70));
+    assert_eq!(66, invert_and_map(80));
+    assert_eq!(46, invert_and_map(90));
+    assert_eq!(26, invert_and_map(100));
 }
