@@ -5,8 +5,6 @@ mod dimmer;
 pub use self::dimmer::Dimmer;
 pub use self::leaks::LeakHandler;
 pub use self::switch::{SwitchHandler, SwitchHolder};
-use super::transport::Message;
-use chrono::prelude::*;
 
 const LOG_TOPIC: &str = "/odin/log/heimdallr/";
 
@@ -34,6 +32,7 @@ fn sub_str(s: &str, from: i32, to: i32) -> Option<&str> {
     }
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
 

@@ -21,16 +21,13 @@ mod handler;
 mod serial_channel;
 
 use serial_channel::SerialChannel;
-use controller::{MqttSpot, Switch, SerialDimmer, SerialSpot};
+use controller::{Switch, SerialDimmer, SerialSpot};
 use handler::SwitchHandler;
 use transport::Mqtt;
 use transport::{Message, MqttChannel};
-use std::iter::Map;
-use std::collections::HashMap;
 use handler::parse_id;
 use controller::Device;
 use handler::SwitchHolder;
-use handler::Dimmer;
 use std::thread;
 use actix_web::server;
 use actix_web::App;
@@ -38,7 +35,7 @@ use actix_web::http;
 use actix_web::Path;
 use actix_web::State;
 use actix_web::Result as WebResult;
-use std::cell::Cell;
+use handler::Dimmer;
 
 fn main() {
     dotenv().ok();
@@ -129,6 +126,7 @@ pub struct AppState {
 }
 
 fn switch_hndl((params, state): (Path<(String, String)>, State<AppState>)) -> WebResult<String> {
+    println!("switch:{}, state:{}", &params.0, &params.1);
     state.switch.handle(&params.0, &params.1);
     Ok("Ok".to_owned())
 }

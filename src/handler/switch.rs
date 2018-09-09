@@ -1,7 +1,5 @@
 use controller::Switch;
 use std::sync::Arc;
-use transport::Message;
-use super::*;
 use std::collections::HashMap;
 
 pub struct SwitchHolder {

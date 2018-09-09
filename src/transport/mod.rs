@@ -18,7 +18,6 @@ use std::sync::Mutex;
 mod error;
 
 pub use self::error::TransportError;
-use std::fmt;
 
 const KEEP_ALIVE: u16 = 10;
 const THREAD_HANDLERS_COUNT: u8 = 2;

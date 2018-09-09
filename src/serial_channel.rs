@@ -4,7 +4,6 @@ use serial::prelude::*;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use serial::unix::TTYPort;
-use std::fs;
 use std::process::Command;
 
 const SETTINGS: serial::PortSettings = serial::PortSettings {
@@ -39,7 +38,7 @@ impl SerialChannel {
                         Some(port)
                     }
                     Err(err) => {
-                        println!("Failed to open port.");
+                        println!("Failed to open port.:{:?}", err);
                         None
                     }
                 }

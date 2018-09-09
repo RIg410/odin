@@ -1,8 +1,6 @@
 use controller::Switch;
 use std::sync::Arc;
-use transport::Message;
 use super::*;
-use controller::Device;
 use handler::switch::SwitchHolder;
 
 pub struct LeakHandler {
