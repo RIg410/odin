@@ -14,10 +14,11 @@ use std::str;
 use threadpool::ThreadPool;
 use time;
 use regex::Regex;
-
+use std::sync::Mutex;
 mod error;
 
 pub use self::error::TransportError;
+use std::fmt;
 
 const KEEP_ALIVE: u16 = 10;
 const THREAD_HANDLERS_COUNT: u8 = 2;
@@ -33,7 +34,7 @@ lazy_static! {
     };
 }
 
-type MsgHandler = Fn((&mut MqPublisher, &Message)) + Send + Sync + 'static;
+type MsgHandler = Fn(&Message) + Send + Sync + 'static;
 
 pub struct Mqtt<'a> {
     server_addr: &'a str,
@@ -47,13 +48,14 @@ impl<'a> Mqtt<'a> {
     }
 
     pub fn subscribe<F>(mut self, topic: &str, on_msg: F) -> Mqtt<'a>
-        where F: Fn((&mut MqPublisher, &Message)) + Send + Sync + 'static {
+        where F: Fn(&Message) + Send + Sync + 'static {
         self.subscribes.push((topic.to_owned(), Arc::new(on_msg)));
         self
     }
 
-    pub fn run(self) -> Result<()> {
+    pub fn run(self, mqtt_channel: MqttChannel) -> Result<()> {
         let mut stream = TcpStream::connect(self.server_addr)?;
+        mqtt_channel.set_stream(stream.try_clone()?);
         self.send_connect_packet(&mut stream)?;
         let pac = self.receive_connack_packet(&mut stream).unwrap();
         if pac.connect_return_code() != ConnectReturnCode::ConnectionAccepted {
@@ -63,6 +65,7 @@ impl<'a> Mqtt<'a> {
         self.send_subscribe_pac(&mut stream)?;
 
         self.ping_demon(&mut stream)?;
+
         let pool = ThreadPool::new(THREAD_HANDLERS_COUNT as usize);
 
         let pattern = self.make_pattern()?;
@@ -94,7 +97,7 @@ impl<'a> Mqtt<'a> {
 
                     pool.execute(move || {
                         let msg = Message::new(publ.topic_name(), &publ.payload()[..]);
-                        handler((&mut MqPublisher { tcp_stream: stream_clone.unwrap() }, &msg));
+                        handler(&msg);
                     });
                 }
                 _ => {}
@@ -183,9 +186,51 @@ impl<'a> Mqtt<'a> {
     }
 }
 
-pub struct MqPublisher {
-    tcp_stream: TcpStream,
+#[derive(Debug)]
+pub struct MqttChannel {
+    stream: Arc<Mutex<Option<TcpStream>>>,
 }
+
+impl MqttChannel {
+    pub fn new() -> MqttChannel {
+        MqttChannel { stream: Arc::new(Mutex::new(None)) }
+    }
+
+    fn set_stream(&self, stream: TcpStream) {
+        if let Ok(mut guard) = self.stream.lock() {
+            *guard = Some(stream);
+        }
+    }
+
+    pub fn publish(&self, pac: Message) -> Result<()> {
+        let pac = PublishPacket::new(
+            TopicName::new(pac.topic)?,
+            QoSWithPacketIdentifier::Level0,
+            pac.payload,
+        );
+
+        let mut buf = Vec::new();
+        pac.encode(&mut buf)?;
+
+        if let Ok(mut guard) = self.stream.lock() {
+            if let Some(ref mut stream) = *guard {
+                stream.write_all(&buf[..])?;
+            } else {
+                println!("Stream is not defined.")
+            }
+        } else {
+            println!("Failed to get guard.")
+        }
+        Ok(())
+    }
+}
+
+impl Clone for MqttChannel {
+    fn clone(&self) -> Self {
+        MqttChannel { stream: self.stream.clone() }
+    }
+}
+
 
 #[derive(Debug)]
 pub struct Message<'a> {
@@ -205,20 +250,5 @@ impl<'a> Message<'a> {
                 Err(format!("Failed to decode publish message {:?}", err))
             }
         }
-    }
-}
-
-impl MqPublisher {
-    pub fn publish(&mut self, pac: Message) -> Result<()> {
-        let pac = PublishPacket::new(
-            TopicName::new(pac.topic)?,
-            QoSWithPacketIdentifier::Level0,
-            pac.payload,
-        );
-
-        let mut buf = Vec::new();
-        pac.encode(&mut buf)?;
-        self.tcp_stream.write_all(&buf[..])?;
-        Ok(())
     }
 }

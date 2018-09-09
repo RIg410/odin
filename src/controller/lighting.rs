@@ -1,26 +1,31 @@
 use super::Device;
-use controller::{Mqtt, Message, ControllerError};
+use controller::{Message, ControllerError};
 use std::sync::Arc;
 use std::sync::RwLock;
 use serial_channel::{SerialChannel, Cmd};
-use transport::MqPublisher;
+use transport::MqttChannel;
 use std::fmt;
 
 #[derive(Debug)]
-pub struct Spot {
+pub struct MqttSpot {
     id: Arc<String>,
     state: Arc<RwLock<SpotState>>,
+    channel: MqttChannel,
 }
 
-impl Spot {
-    pub fn new(id: &str) -> Spot {
-        Spot { id: Arc::new(id.to_owned()), state: Arc::new(RwLock::new(SpotState::new())) }
+impl MqttSpot {
+    pub fn new(id: &str, channel: MqttChannel) -> MqttSpot {
+        MqttSpot {
+            id: Arc::new(id.to_owned()),
+            state: Arc::new(RwLock::new(SpotState::new())),
+            channel,
+        }
     }
 }
 
-impl Clone for Spot {
+impl Clone for MqttSpot {
     fn clone(&self) -> Self {
-        Spot { id: self.id.clone(), state: self.state.clone() }
+        MqttSpot { id: self.id.clone(), state: self.state.clone(), channel: self.channel.clone() }
     }
 }
 
@@ -50,7 +55,7 @@ impl SpotState {
     }
 }
 
-impl Device for Spot {
+impl Device for MqttSpot {
     fn is_on(&self) -> Result<bool, ControllerError> {
         let state = self.state.read().unwrap();
         Ok(state.is_on)
@@ -78,9 +83,9 @@ impl Device for Spot {
         Ok(state.is_on)
     }
 
-    fn flush(&self, mqtt: &mut Mqtt) -> Result<(), ControllerError> {
+    fn flush(&self) -> Result<(), ControllerError> {
         let state = self.state.read().unwrap();
-        mqtt.publish(Message::new(&format!("/spot/{}", self.id), vec!(state.payload())))?;
+        self.channel.publish(Message::new(&format!("/spot/{}", self.id), vec!(state.payload())))?;
         Ok(())
     }
 }
@@ -138,7 +143,7 @@ impl Device for SerialDimmer {
         Ok(state.is_on)
     }
 
-    fn flush(&self, _: &mut MqPublisher) -> Result<(), ControllerError> {
+    fn flush(&self) -> Result<(), ControllerError> {
         let state = self.state.read().unwrap();
         let arg = if state.is_on {
             invert_and_map(state.brightness)
@@ -206,7 +211,7 @@ impl Device for SerialSpot {
         Ok(state.is_on)
     }
 
-    fn flush(&self, _: &mut MqPublisher) -> Result<(), ControllerError> {
+    fn flush(&self) -> Result<(), ControllerError> {
         let state = self.state.read().unwrap();
         let arg = if state.is_on {
             0x01

@@ -2,9 +2,9 @@ mod lighting;
 mod switch;
 mod tap;
 
-pub use super::transport::{MqPublisher as Mqtt, TransportError as TError, Message};
+pub use super::transport::{TransportError as TError, Message};
 use std::sync::PoisonError;
-pub use controller::lighting::{Spot, SerialDimmer, SerialSpot, Dimmer};
+pub use controller::lighting::{MqttSpot, SerialDimmer, SerialSpot, Dimmer};
 pub use controller::tap::Tap;
 pub use controller::switch::Switch;
 use std::collections::HashMap;
@@ -16,7 +16,7 @@ pub trait Device: Send + Sync + Debug {
     fn on(&self) -> Result<(), ControllerError>;
     fn off(&self) -> Result<(), ControllerError>;
     fn toggle(&self) -> Result<bool, ControllerError>;
-    fn flush(&self, mqtt: &mut Mqtt) -> Result<(), ControllerError>;
+    fn flush(&self) -> Result<(), ControllerError>;
 }
 
 pub struct DeviceHolder {

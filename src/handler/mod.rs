@@ -1,9 +1,10 @@
 mod switch;
 mod leaks;
+mod dimmer;
 
+pub use self::dimmer::Dimmer;
 pub use self::leaks::LeakHandler;
-pub use self::switch::SwitchHandler;
-use super::transport::MqPublisher;
+pub use self::switch::{SwitchHandler, SwitchHolder};
 use super::transport::Message;
 use chrono::prelude::*;
 
@@ -30,34 +31,6 @@ fn sub_str(s: &str, from: i32, to: i32) -> Option<&str> {
         None
     } else {
         Some(&s[from as usize..to as usize])
-    }
-}
-
-
-pub trait MessageHandler {
-    fn handel(&self, msg: &Message, publisher: &mut MqPublisher) -> Result<Option<String>, Option<String>>;
-
-    fn on_message(&self, msg: &Message, publisher: &mut MqPublisher) {
-        let res = self.handel(msg, publisher);
-        match res {
-            Ok(Some(res)) => send_log(publisher, res, msg, LogType::info),
-            Err(Some(res)) => send_log(publisher, res, msg, LogType::error),
-            _ => {}
-        }
-    }
-}
-
-#[derive(Debug)]
-enum LogType {
-    info,
-    error,
-}
-
-fn send_log(publisher: &mut MqPublisher, log: String, msg: &Message, log_lvl: LogType) {
-    let log_line = format!("{:?}-{:?}-{}-{:?}", Local::now(), log_lvl, msg.topic, log);
-    let res = publisher.publish(Message::new(LOG_TOPIC, log_line));
-    if res.is_err() {
-        // TODO
     }
 }
 

@@ -1,6 +1,5 @@
 use controller::Device;
 use std::sync::Arc;
-use transport::MqPublisher;
 
 #[derive(Debug)]
 pub struct Switch {
@@ -26,19 +25,19 @@ impl Switch {
         &self.inner.id
     }
 
-    pub fn switch_on(&self, mqtt: &mut MqPublisher) {
+    pub fn switch_on(&self) {
         for dev in &self.inner.devices {
             dev.on();
-            if let Err(err) = dev.flush(mqtt) {
+            if let Err(err) = dev.flush() {
                 println!("Failed to send: {:?}", err);
             }
         }
     }
 
-    pub fn switch_off(&self, mqtt: &mut MqPublisher) {
+    pub fn switch_off(&self) {
         for dev in &self.inner.devices {
             dev.off();
-            dev.flush(mqtt);
+            dev.flush();
         }
     }
 }

@@ -1,50 +1,64 @@
 use controller::Switch;
 use std::sync::Arc;
-use super::MessageHandler;
-use transport::{MqPublisher, Message};
+use transport::Message;
 use super::*;
-use configuration::SwitchConfiguration as Config;
+use std::collections::HashMap;
+
+pub struct SwitchHolder {
+    switch_map: HashMap<String, Switch>
+}
+
+impl SwitchHolder {
+    pub fn new(switch_vec: Vec<Switch>) -> SwitchHolder {
+        SwitchHolder {
+            switch_map: switch_vec.iter()
+                .map(|switch| { (switch.id().to_owned(), switch.clone()) })
+                .collect()
+        }
+    }
+
+    pub fn get_switch(&self, switch_id: &str) -> Option<&Switch> {
+        match self.switch_map.get(switch_id) {
+            Some(sw) => Some(&sw),
+            None => None
+        }
+    }
+}
 
 pub struct SwitchHandler {
-    config: Arc<Config>,
+    switch_holder: Arc<SwitchHolder>,
 }
 
 impl SwitchHandler {
-    pub fn new(config: Arc<Config>) -> SwitchHandler {
-        SwitchHandler { config }
+    pub fn new(config: Arc<SwitchHolder>) -> SwitchHandler {
+        SwitchHandler { switch_holder: config }
     }
 
     #[inline]
-    fn get_switch(&self, topic: &str) -> Result<&Switch, Option<String>> {
-        let switch_id = parse_id(topic);
-        if let Some(id) = switch_id {
-            let switch = self.config.get_switch(id);
-            if let Some(switch) = switch {
-                Ok(switch)
-            } else {
-                Err(Some(format!("There are not lights for switch with id :{}", id)))
-            }
+    fn get_switch(&self, switch_id: &str) -> Result<&Switch, Option<String>> {
+        let switch = self.switch_holder.get_switch(switch_id);
+        if let Some(switch) = switch {
+            Ok(switch)
         } else {
-            Err(Some("Failed to parse topic".to_owned()))
+            Err(Some(format!("There are not lights for switch with id :{}", switch_id)))
         }
     }
-}
 
-impl MessageHandler for SwitchHandler {
-    fn handel(&self, msg: &Message, publisher: &mut MqPublisher) -> Result<Option<String>, Option<String>> {
-        let switch = self.get_switch(msg.topic)?;
-
-        match String::from_utf8_lossy(&msg.payload).as_ref() {
-            "ON" => {
-                switch.switch_on(publisher);
+    pub fn handle(&self, switch_id: &str, state: &str) {
+        if let Ok(switch) = self.get_switch(switch_id) {
+            match state {
+                "ON" => {
+                    switch.switch_on();
+                }
+                "OFF" => {
+                    switch.switch_off();
+                }
+                a @ _ => {
+                    println!("Unsupported action: [{}]", a);
+                }
             }
-            "OFF" => {
-                switch.switch_off(publisher);
-            }
-            a @ _ => {
-                return Err(Some(format!("Unsupported action: [{}]", a)));
-            }
+        } else {
+            println!("Switch not found:{}", switch_id);
         }
-        Ok(None)
     }
 }
