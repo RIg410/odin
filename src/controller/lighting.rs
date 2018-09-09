@@ -86,7 +86,7 @@ impl Device for Spot {
 }
 
 pub struct SerialDimmer {
-    id: Arc<String>,
+    pub id: Arc<String>,
     p_id: u8,
     channel: SerialChannel,
     state: Arc<RwLock<SpotState>>,
@@ -154,7 +154,7 @@ impl Device for SerialDimmer {
 #[inline]
 fn invert_and_map(val: u8) -> u8 {
     if val == 0 {
-         255
+        255
     } else {
         map(100 - val as u32, 0, 100, 26, 229) as u8
     }
@@ -227,6 +227,30 @@ impl Clone for SerialSpot {
 impl fmt::Debug for SerialSpot {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "SerialSpot {{ id: {}, p_id: {} state: {:?}}}", self.id, self.p_id, self.state)
+    }
+}
+
+
+pub trait Dimmer: Send + Sync {
+    fn set_dimm(&self, dimm: u8);
+    fn flush(&self);
+}
+
+impl Dimmer for SerialDimmer {
+    fn set_dimm(&self, dimm: u8) {
+        let mut state = self.state.write().unwrap();
+        state.brightness = dimm;
+    }
+
+    fn flush(&self) {
+        let state = self.state.read().unwrap();
+        let arg = if state.is_on {
+            invert_and_map(state.brightness)
+        } else {
+            255
+        };
+
+        self.channel.send(Cmd::new(0x01, self.p_id, arg));
     }
 }
 

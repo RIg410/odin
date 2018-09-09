@@ -4,7 +4,7 @@ mod tap;
 
 pub use super::transport::{MqPublisher as Mqtt, TransportError as TError, Message};
 use std::sync::PoisonError;
-pub use controller::lighting::{Spot, SerialDimmer, SerialSpot};
+pub use controller::lighting::{Spot, SerialDimmer, SerialSpot, Dimmer};
 pub use controller::tap::Tap;
 pub use controller::switch::Switch;
 use std::collections::HashMap;

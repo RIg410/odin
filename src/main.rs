@@ -27,6 +27,10 @@ use controller::{Spot, Switch, SerialDimmer, SerialSpot};
 use handler::SwitchHandler;
 use transport::Mqtt;
 use transport::Message;
+use std::iter::Map;
+use std::collections::HashMap;
+use handler::parse_id;
+use controller::Device;
 
 fn main() {
     dotenv().ok();
@@ -38,6 +42,12 @@ fn main() {
 
     let bedroom_lamp = SerialSpot::new("bedroom_lamp", 0x01, channel.clone());
     let lounge_lamp = SerialSpot::new("lounge_lamp", 0x02, channel.clone());
+
+    let mut dimmer =  Dimmer::new();
+    dimmer.add_serial_dimmer(corridor_lamp.clone());
+    dimmer.add_serial_dimmer(bathroom_spot.clone());
+    dimmer.add_serial_dimmer(toilet_spot.clone());
+    dimmer.add_serial_dimmer(kitchen_lamp.clone());
 
     let switch_list = vec![
         Switch::new("corridor_1", vec![Box::new(corridor_lamp.clone())]),
@@ -57,13 +67,24 @@ fn main() {
     let switch_config = Arc::new(SwitchConfiguration::new(switch_list));
     let switch = Arc::new(SwitchHandler::new(switch_config.clone()));
 
+    let dimmer = Arc::new(dimmer);
     loop {
+        let dimmer = dimmer.clone();
         let switch = switch.clone();
         let mq = env::var("MQTT").unwrap_or("localhost:1883".to_owned());
         println!("connect to MQTT: {}", mq);
         if let Err(err) = Mqtt::new(&mq, "odin")
             .subscribe("/switch/+", move |(out, msg)| {
                 switch.on_message(msg, out);
+            })
+            .subscribe("/dimm/+", move |(out, msg)| {
+                if let Some(id) =  parse_id(msg.topic) {
+                    if let Ok(payload) = msg.payload_as_string() {
+                        if let Ok(d) = payload.parse::<u8>() {
+                            dimmer.dimm(id, d)
+                        }
+                    }
+                }
             })
             .subscribe("/odin/ping", move |(out, msg)| {
                 out.publish(Message::new("/odin/pong", msg.payload.to_owned()));
@@ -73,5 +94,28 @@ fn main() {
         }
 
         std::thread::sleep_ms(2000);
+    }
+
+    use controller::Dimmer as DimmDevice;
+
+    struct Dimmer {
+        lamps: HashMap<String, Box<dyn DimmDevice>>
+    }
+
+    impl Dimmer {
+        pub fn new() -> Dimmer {
+            Dimmer { lamps: HashMap::new() }
+        }
+
+        pub fn add_serial_dimmer(&mut self, dimmer: SerialDimmer) {
+            self.lamps.insert(dimmer.id.as_ref().to_owned(), Box::new(dimmer));
+        }
+
+        pub fn dimm(&self, name: &str, val: u8) {
+            if let Some(lamp) = self.lamps.get(name) {
+                lamp.set_dimm(val);
+                lamp.flush();
+            }
+        }
     }
 }
