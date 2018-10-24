@@ -1,13 +1,14 @@
-use controller::Switch;
+use controller::CommonSwitch;
 use std::sync::Arc;
 use std::collections::HashMap;
+use controller::Switch;
 
 pub struct SwitchHolder {
-    switch_map: HashMap<String, Switch>
+    switch_map: HashMap<String, Box<Switch>>
 }
 
 impl SwitchHolder {
-    pub fn new(switch_vec: Vec<Switch>) -> SwitchHolder {
+    pub fn new(switch_vec: Vec<Box<Switch>>) -> SwitchHolder {
         SwitchHolder {
             switch_map: switch_vec.iter()
                 .map(|switch| { (switch.id().to_owned(), switch.clone()) })

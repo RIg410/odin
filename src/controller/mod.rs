@@ -5,8 +5,12 @@ mod tap;
 pub use super::transport::{TransportError as TError, Message};
 use std::sync::PoisonError;
 pub use controller::lighting::{MqttSpot, SerialDimmer, SerialSpot, Dimmer};
-pub use controller::tap::Tap;
-pub use controller::switch::Switch;
+pub use controller::tap::{Tap, Taps};
+pub use controller::switch::{
+    CommonSwitch,
+    ExitSwitch,
+    Switch
+};
 use std::collections::HashMap;
 use std::fmt::Debug;
 

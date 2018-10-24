@@ -1,4 +1,4 @@
-use controller::Switch;
+use controller::CommonSwitch;
 use std::sync::Arc;
 use super::*;
 use handler::switch::SwitchHolder;
@@ -12,7 +12,7 @@ impl LeakHandler {
         LeakHandler { config }
     }
 
-    fn get_switch(&self, topic: &str) -> Result<&Switch, Option<String>> {
+    fn get_switch(&self, topic: &str) -> Result<&CommonSwitch, Option<String>> {
         let switch_id = parse_id(topic);
         if let Some(id) = switch_id {
             let switch = self.config.get_switch(id);
