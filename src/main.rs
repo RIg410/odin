@@ -1,12 +1,4 @@
 extern crate serial as uart;
-extern crate dotenv;
-extern crate mqtt;
-extern crate time;
-extern crate threadpool;
-extern crate regex;
-extern crate lazy_static;
-extern crate chrono;
-extern crate bson;
 extern crate actix_web;
 extern crate futures;
 
@@ -14,15 +6,12 @@ mod controller;
 mod serial;
 mod web;
 
-use dotenv::dotenv;
 use serial::SerialChannel;
 use controller::{SerialDimmer, WebDimmer, Switch, SwitchHandler, DeviceHandler, WebLed, ActionType};
 use actix_web::{server, App, http, Path, State, Result as WebResult};
 use web::WebController;
 
 fn main() {
-    dotenv().ok();
-
     let web_controller = WebController::new();
     let devices = init_devices(&web_controller);
     let switch_handler = init_switch(devices.clone());

@@ -4,14 +4,6 @@ version = "0.1.0"
 authors = ["dyakushev <DYakushev@medlinesoft.ru>"]
 
 [dependencies]
-regex = "0.2.5"
-mqtt-protocol = "0.4.2"
-lazy_static = "0.2.11"
-time = "0.1.39"
-threadpool="1.7.1"
-chrono = "0.4.0"
-bson = "0.11.0"
-serial="*"
-dotenv="*"
-actix-web="*"
-futures="*"
+serial="0.4.0"
+actix-web="0.7.6"
+futures="0.1.24"
