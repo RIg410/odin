@@ -1,8 +1,8 @@
-use controller::Device;
 use std::sync::Arc;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use controller::ActionType;
+use controller::DevContainer;
 
 pub type Action = Fn(ActionType) + Sync + Send + 'static;
 
@@ -23,17 +23,13 @@ impl Switch {
         Switch { id: Arc::new(id.into().to_string()), act: Arc::new(act) }
     }
 
-    pub fn device<'a, ID, D>(id: ID, dev: D) -> Switch
-        where ID: Into<Cow<'a, str>>,
-              D: Device + 'static {
+    pub fn device<'a, ID>(id: ID, dev: DevContainer) -> Switch
+        where ID: Into<Cow<'a, str>> {
         Switch { id: Arc::new(id.into().to_string()), act: Arc::new(move |t| dev.switch(&t)) }
     }
 
-    pub fn devices2<'a, ID, D1, D2>(id: ID, dev_1: D1, dev_2: D2) -> Switch
-        where ID: Into<Cow<'a, str>>,
-              D1: Device + 'static,
-              D2: Device + 'static {
-
+    pub fn devices2<'a, ID>(id: ID, dev_1: DevContainer, dev_2: DevContainer) -> Switch
+        where ID: Into<Cow<'a, str>> {
         Switch {
             id: Arc::new(id.into().to_string()),
             act: Arc::new(move |t| {

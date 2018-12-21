@@ -97,7 +97,7 @@ impl fmt::Debug for SerialDimmer {
 pub struct WebDimmer {
     pub id: Arc<String>,
     state: Arc<RwLock<SpotState>>,
-    web: WebController
+    web: WebController,
 }
 
 impl WebDimmer {
@@ -105,8 +105,14 @@ impl WebDimmer {
         WebDimmer {
             id: Arc::new(id.to_owned()),
             state: Arc::new(RwLock::new(SpotState::new())),
-            web
+            web,
         }
+    }
+
+    pub fn flush(&self) {
+        let state = self.state.read().unwrap();
+        let switch = if state.is_on { "ON" } else { "OFF" };
+        self.web.send(&self.id, format!("{}:{}", switch, state.brightness));
     }
 }
 
@@ -116,19 +122,22 @@ impl Device for WebDimmer {
     }
 
     fn is_on(&self) -> bool {
-        unimplemented!()
+        self.state.read().unwrap().is_on
     }
 
     fn power(&self) -> u8 {
-        unimplemented!()
+        let state = self.state.read().unwrap();
+        state.brightness
     }
 
     fn switch(&self, action_type: &ActionType) {
-        unimplemented!()
+        let mut state = self.state.write().unwrap();
+        state.is_on = action_type == &ActionType::On;
+        self.flush()
     }
 
-    fn set_power(&self, power: u8) {
-        unimplemented!()
+    fn set_power(&self, _power: u8) {
+        self.flush()
     }
 }
 
@@ -154,25 +163,42 @@ pub enum LedMode {
     Borealis(SpeedAndBrightness),
 }
 
+impl LedMode {
+    fn arg(&self) -> String {
+        match self {
+            LedMode::Color((r, g, b)) => format!("color:{}:{}:{}", r, g, b),
+            LedMode::Rainbow((speed, power)) => format!("rainbow:{}:{}", speed, power),
+            LedMode::Borealis((speed, power)) => format!("borealis:{}:{}", speed, power),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct LedState {
-    on: bool,
+    is_on: bool,
     mode: LedMode,
 }
+
 #[derive(Debug, Clone)]
 pub struct WebLed {
     pub id: Arc<String>,
     state: Arc<RwLock<LedState>>,
-    web: WebController
+    web: WebController,
 }
 
 impl WebLed {
     pub fn new(id: &str, web: WebController) -> WebLed {
         WebLed {
             id: Arc::new(id.to_owned()),
-            state: Arc::new(RwLock::new(LedState { on: false, mode: LedMode::Color((200, 200, 200)) })),
-            web
+            state: Arc::new(RwLock::new(LedState { is_on: false, mode: LedMode::Color((200, 200, 200)) })),
+            web,
         }
+    }
+
+    pub fn flush(&self) {
+        let state = self.state.read().unwrap();
+        let switch = if state.is_on { "ON" } else { "OFF" };
+        self.web.send(&self.id, format!("{}:{}", switch, state.mode.arg()));
     }
 }
 
@@ -182,19 +208,22 @@ impl Device for WebLed {
     }
 
     fn is_on(&self) -> bool {
-        unimplemented!()
+        self.state.read().unwrap().is_on
     }
 
     fn power(&self) -> u8 {
-        unimplemented!()
+        let state = self.state.read().unwrap();
+        if state.is_on { 100 } else { 0 }
     }
 
     fn switch(&self, action_type: &ActionType) {
-        unimplemented!()
+        let mut state = self.state.write().unwrap();
+        state.is_on = action_type == &ActionType::On;
+        self.flush();
     }
 
-    fn set_power(&self, power: u8) {
-        unimplemented!()
+    fn set_power(&self, _power: u8) {
+        self.flush();
     }
 }
 

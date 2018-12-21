@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::collections::HashMap;
+use curl::easy::Easy;
+use std::time::Duration;
 
 #[derive(Debug)]
 pub struct WebController {
@@ -20,6 +22,18 @@ impl WebController {
         ids.into_iter().for_each(|id| {
             map.insert(id, host.clone());
         });
+    }
+
+    pub fn send(&self, id: &str, args: String) {
+        let devices = self.devices.read().unwrap();
+        if let Some(host) = devices.get(id) {
+            let mut handle = Easy::new();
+            let url = format!("http://{}/{}/{}", host, id, args);
+            handle.url(&url).unwrap();
+            handle.timeout(Duration::new(1, 0));
+            let perf_res = handle.perform();
+            println!("{} => {:?}", url, perf_res)
+        }
     }
 }
 
