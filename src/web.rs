@@ -1,7 +1,9 @@
-use std::sync::Arc;
-use std::sync::RwLock;
-use std::collections::HashMap;
-use std::time::Duration;
+use std::{
+    sync::Arc,
+    sync::RwLock,
+    collections::HashMap,
+    time::Duration
+};
 use actix_web::{actix, client};
 use futures::future::Future;
 

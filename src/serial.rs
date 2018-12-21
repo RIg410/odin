@@ -1,17 +1,21 @@
-use serial;
-use std::io::prelude::*;
-use serial::prelude::*;
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-use serial::unix::TTYPort;
-use std::process::Command;
+use uart::{
+    self,
+    prelude::*,
+    unix::TTYPort
+};
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+    process::Command,
+    io::prelude::*
+};
 
-const SETTINGS: serial::PortSettings = serial::PortSettings {
-    baud_rate: serial::Baud9600,
-    char_size: serial::Bits8,
-    parity: serial::ParityNone,
-    stop_bits: serial::Stop1,
-    flow_control: serial::FlowNone,
+const SETTINGS: uart::PortSettings = uart::PortSettings {
+    baud_rate: uart::Baud9600,
+    char_size: uart::Bits8,
+    parity: uart::ParityNone,
+    stop_bits: uart::Stop1,
+    flow_control: uart::FlowNone,
 };
 
 pub struct SerialChannel {

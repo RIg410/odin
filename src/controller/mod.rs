@@ -1,16 +1,18 @@
 mod lighting;
 mod switch;
 
-pub use controller::lighting::{SerialDimmer, WebDimmer, WebLed};
-pub use controller::switch::{Switch, SwitchHandler};
-
-use std::sync::PoisonError;
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::sync::{Arc, RwLock};
-use std::str::FromStr;
-use std::ops::Add;
-use std::ops::AddAssign;
+pub use controller::{
+    lighting::{SerialDimmer, WebDimmer, WebLed},
+    switch::{Switch, SwitchHandler},
+};
+use std::{
+    sync::PoisonError,
+    collections::HashMap,
+    fmt::Debug,
+    sync::{Arc, RwLock},
+    str::FromStr,
+    ops::{Add, AddAssign},
+};
 
 pub trait Device: Send + Sync + Debug {
     fn id(&self) -> &str;
@@ -18,7 +20,7 @@ pub trait Device: Send + Sync + Debug {
     fn power(&self) -> u8;
     fn switch(&self, action_type: &ActionType);
     fn set_power(&self, power: u8);
-    fn set_state(&self, action_type: ActionType, power: u8);
+    fn set_state(&self, action_type: &ActionType, power: u8);
 }
 
 #[derive(PartialEq)]
@@ -82,7 +84,7 @@ impl DevContainer {
         self.dev().set_power(power);
     }
 
-    pub fn set_state(&self, action_type: ActionType, power: u8) {
+    pub fn set_state(&self, action_type: &ActionType, power: u8) {
         let dev = self.dev();
         dev.set_state(action_type, power);
     }
@@ -134,11 +136,10 @@ impl DeviceHandler {
     pub fn set_state(&self, id: &str, action_type: ActionType, power: u8) {
         let map = self.devices.read().unwrap();
         if let Some(device) = map.get(id) {
-            device.set_state(action_type, power);
+            device.set_state(&action_type, power);
         }
     }
 }
-
 
 impl Add<SerialDimmer> for DeviceHandler {
     type Output = DeviceHandler;
@@ -189,7 +190,6 @@ impl AddAssign<WebDimmer> for DeviceHandler {
         map.insert(device.id().to_string(), DevContainer::WebDimmer(device));
     }
 }
-
 
 impl AddAssign<WebLed> for DeviceHandler {
     fn add_assign(&mut self, device: WebLed) {

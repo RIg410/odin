@@ -1,4 +1,4 @@
-extern crate serial;
+extern crate serial as uart;
 extern crate dotenv;
 extern crate mqtt;
 extern crate time;
@@ -11,19 +11,13 @@ extern crate actix_web;
 extern crate futures;
 
 mod controller;
-mod serial_channel;
+mod serial;
 mod web;
 
 use dotenv::dotenv;
-use serial_channel::SerialChannel;
-use controller::{SerialDimmer, WebDimmer, Switch, SwitchHandler, DeviceHandler, WebLed};
-use actix_web::server;
-use actix_web::App;
-use actix_web::http;
-use actix_web::Path;
-use actix_web::State;
-use actix_web::Result as WebResult;
-use controller::ActionType;
+use serial::SerialChannel;
+use controller::{SerialDimmer, WebDimmer, Switch, SwitchHandler, DeviceHandler, WebLed, ActionType};
+use actix_web::{server, App, http, Path, State, Result as WebResult};
 use web::WebController;
 
 fn main() {

@@ -1,8 +1,9 @@
 use super::Device;
-use std::sync::Arc;
-use std::sync::RwLock;
-use serial_channel::{SerialChannel, Cmd};
-use std::fmt;
+use std::{
+    sync::{Arc, RwLock},
+    fmt
+};
+use serial::{SerialChannel, Cmd};
 use controller::ActionType;
 use web::WebController;
 
@@ -89,11 +90,11 @@ impl Device for SerialDimmer {
         self.flush()
     }
 
-    fn set_state(&self, action_type: ActionType, power: u8) {
+    fn set_state(&self, action_type: &ActionType, power: u8) {
         {
             let mut state = self.state.write().unwrap();
             state.brightness = power;
-            state.is_on = action_type == ActionType::On;
+            state.is_on = action_type == &ActionType::On;
         }
         self.flush()
     }
@@ -153,11 +154,11 @@ impl Device for WebDimmer {
         self.flush()
     }
 
-    fn set_state(&self, action_type: ActionType, power: u8) {
+    fn set_state(&self, action_type: &ActionType, power: u8) {
         {
             let mut state = self.state.write().unwrap();
             state.brightness = power;
-            state.is_on = action_type == ActionType::On;
+            state.is_on = action_type == &ActionType::On;
         }
         self.flush()
     }
@@ -250,10 +251,10 @@ impl Device for WebLed {
         self.flush();
     }
 
-    fn set_state(&self, action_type: ActionType, power: u8) {
+    fn set_state(&self, action_type: &ActionType, _power: u8) {
         {
             let mut state = self.state.write().unwrap();
-            state.is_on = action_type == ActionType::On;
+            state.is_on = action_type == &ActionType::On;
         }
         self.flush()
     }

@@ -1,8 +1,9 @@
-use std::sync::Arc;
-use std::borrow::Cow;
-use std::collections::HashMap;
-use controller::ActionType;
-use controller::DevContainer;
+use std::{
+    sync::Arc,
+    borrow::Cow,
+    collections::HashMap,
+};
+use controller::{ActionType, DevContainer};
 
 pub type Action = Fn(ActionType) + Sync + Send + 'static;
 
