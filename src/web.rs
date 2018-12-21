@@ -1,8 +1,9 @@
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::collections::HashMap;
-use curl::easy::Easy;
 use std::time::Duration;
+use actix_web::{actix, client};
+use futures::future::Future;
 
 #[derive(Debug)]
 pub struct WebController {
@@ -24,15 +25,30 @@ impl WebController {
         });
     }
 
-    pub fn send(&self, id: &str, args: String) {
+    pub fn host(&self, id: &str) -> Option<Arc<String>> {
         let devices = self.devices.read().unwrap();
         if let Some(host) = devices.get(id) {
-            let mut handle = Easy::new();
-            let url = format!("http://{}/{}/{}", host, id, args);
-            handle.url(&url).unwrap();
-            handle.timeout(Duration::new(1, 0));
-            let perf_res = handle.perform();
-            println!("{} => {:?}", url, perf_res)
+            Some(host.clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn send(&self, id: &str, args: String) {
+        if let Some(host) = self.host(id) {
+            let url = format!("http://{}/{}/{}", &host, id, args);
+            println!("req => {:?}", url);
+            actix::spawn(
+                client::get(url)
+                    .timeout(Duration::new(1, 0))
+                    .finish().unwrap()
+                    .send()
+                    .map_err(|_| ())
+                    .and_then(|response| {
+                        println!("resp => {:?}", response);
+                        Ok(())
+                    })
+            );
         }
     }
 }

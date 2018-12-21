@@ -8,7 +8,7 @@ extern crate lazy_static;
 extern crate chrono;
 extern crate bson;
 extern crate actix_web;
-extern crate curl;
+extern crate futures;
 
 mod controller;
 mod serial_channel;
@@ -84,7 +84,6 @@ fn reg_device((params, state): (Path<(String, String)>, State<AppState>)) -> Web
     state.web_controller.reg_device(ids, host);
     Ok("Ok".to_owned())
 }
-
 
 fn init_devices(web_controller: &WebController) -> DeviceHandler {
     let mut devices = DeviceHandler::new();

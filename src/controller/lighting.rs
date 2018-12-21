@@ -74,16 +74,27 @@ impl Device for SerialDimmer {
     }
 
     fn switch(&self, action_type: &ActionType) {
-        let mut state = self.state.write().unwrap();
-        state.is_on = action_type == &ActionType::On;
-
+        {
+            let mut state = self.state.write().unwrap();
+            state.is_on = action_type == &ActionType::On;
+        }
         self.flush()
     }
 
     fn set_power(&self, dim: u8) {
-        let mut state = self.state.write().unwrap();
-        state.brightness = dim;
+        {
+            let mut state = self.state.write().unwrap();
+            state.brightness = dim;
+        }
+        self.flush()
+    }
 
+    fn set_state(&self, action_type: ActionType, power: u8) {
+        {
+            let mut state = self.state.write().unwrap();
+            state.brightness = power;
+            state.is_on = action_type == ActionType::On;
+        }
         self.flush()
     }
 }
@@ -131,12 +142,23 @@ impl Device for WebDimmer {
     }
 
     fn switch(&self, action_type: &ActionType) {
-        let mut state = self.state.write().unwrap();
-        state.is_on = action_type == &ActionType::On;
+        {
+            let mut state = self.state.write().unwrap();
+            state.is_on = action_type == &ActionType::On;
+        }
         self.flush()
     }
 
     fn set_power(&self, _power: u8) {
+        self.flush()
+    }
+
+    fn set_state(&self, action_type: ActionType, power: u8) {
+        {
+            let mut state = self.state.write().unwrap();
+            state.brightness = power;
+            state.is_on = action_type == ActionType::On;
+        }
         self.flush()
     }
 }
@@ -217,16 +239,25 @@ impl Device for WebLed {
     }
 
     fn switch(&self, action_type: &ActionType) {
-        let mut state = self.state.write().unwrap();
-        state.is_on = action_type == &ActionType::On;
+        {
+            let mut state = self.state.write().unwrap();
+            state.is_on = action_type == &ActionType::On;
+        }
         self.flush();
     }
 
     fn set_power(&self, _power: u8) {
         self.flush();
     }
-}
 
+    fn set_state(&self, action_type: ActionType, power: u8) {
+        {
+            let mut state = self.state.write().unwrap();
+            state.is_on = action_type == ActionType::On;
+        }
+        self.flush()
+    }
+}
 
 #[inline]
 fn map(x: u32, in_min: u32, in_max: u32, out_min: u32, out_max: u32) -> u32 {

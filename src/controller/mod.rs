@@ -18,6 +18,7 @@ pub trait Device: Send + Sync + Debug {
     fn power(&self) -> u8;
     fn switch(&self, action_type: &ActionType);
     fn set_power(&self, power: u8);
+    fn set_state(&self, action_type: ActionType, power: u8);
 }
 
 #[derive(PartialEq)]
@@ -83,8 +84,7 @@ impl DevContainer {
 
     pub fn set_state(&self, action_type: ActionType, power: u8) {
         let dev = self.dev();
-        dev.set_power(power);
-        dev.switch(&action_type);
+        dev.set_state(action_type, power);
     }
 }
 
@@ -134,8 +134,7 @@ impl DeviceHandler {
     pub fn set_state(&self, id: &str, action_type: ActionType, power: u8) {
         let map = self.devices.read().unwrap();
         if let Some(device) = map.get(id) {
-            device.set_power(power);
-            device.switch(&action_type);
+            device.set_state(action_type, power);
         }
     }
 }
