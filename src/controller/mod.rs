@@ -57,18 +57,18 @@ impl<T> From<PoisonError<T>> for ControllerError {
 }
 
 #[derive(Clone)]
-pub enum DevContainer {
+pub enum DeviceBox {
     SerialDimmer(SerialDimmer),
     WebDimmer(WebDimmer),
     WebLed(WebLed),
 }
 
-impl DevContainer {
+impl DeviceBox {
     fn dev(&self) -> &Device {
         match self {
-            DevContainer::SerialDimmer(dev) => dev,
-            DevContainer::WebDimmer(dev) => dev,
-            DevContainer::WebLed(dev) => dev,
+            DeviceBox::SerialDimmer(dev) => dev,
+            DeviceBox::WebDimmer(dev) => dev,
+            DeviceBox::WebLed(dev) => dev,
         }
     }
 
@@ -92,7 +92,7 @@ impl DevContainer {
 
 #[derive(Clone)]
 pub struct DeviceHandler {
-    devices: Arc<RwLock<HashMap<String, DevContainer>>>
+    devices: Arc<RwLock<HashMap<String, DeviceBox>>>
 }
 
 impl DeviceHandler {
@@ -102,12 +102,12 @@ impl DeviceHandler {
         }
     }
 
-    pub fn dev(&self, id: &str) -> DevContainer {
+    pub fn dev(&self, id: &str) -> DeviceBox {
         let map = self.devices.read().unwrap();
         map.get(id).unwrap().clone()
     }
 
-    pub fn push(&self, device: DevContainer) -> DevContainer {
+    pub fn push(&self, device: DeviceBox) -> DeviceBox {
         let mut map = self.devices.write().unwrap();
         map.insert(device.id().to_string(), device.clone());
         device
@@ -147,7 +147,7 @@ impl Add<SerialDimmer> for DeviceHandler {
     fn add(self, device: SerialDimmer) -> DeviceHandler {
         {
             let mut map = self.devices.write().unwrap();
-            map.insert(device.id().to_string(), DevContainer::SerialDimmer(device));
+            map.insert(device.id().to_string(), DeviceBox::SerialDimmer(device));
         }
         self
     }
@@ -159,7 +159,7 @@ impl Add<WebDimmer> for DeviceHandler {
     fn add(self, device: WebDimmer) -> DeviceHandler {
         {
             let mut map = self.devices.write().unwrap();
-            map.insert(device.id().to_string(), DevContainer::WebDimmer(device));
+            map.insert(device.id().to_string(), DeviceBox::WebDimmer(device));
         }
         self
     }
@@ -171,7 +171,7 @@ impl Add<WebLed> for DeviceHandler {
     fn add(self, device: WebLed) -> DeviceHandler {
         {
             let mut map = self.devices.write().unwrap();
-            map.insert(device.id().to_string(), DevContainer::WebLed(device));
+            map.insert(device.id().to_string(), DeviceBox::WebLed(device));
         }
         self
     }
@@ -180,20 +180,20 @@ impl Add<WebLed> for DeviceHandler {
 impl AddAssign<SerialDimmer> for DeviceHandler {
     fn add_assign(&mut self, device: SerialDimmer) {
         let mut map = self.devices.write().unwrap();
-        map.insert(device.id().to_string(), DevContainer::SerialDimmer(device));
+        map.insert(device.id().to_string(), DeviceBox::SerialDimmer(device));
     }
 }
 
 impl AddAssign<WebDimmer> for DeviceHandler {
     fn add_assign(&mut self, device: WebDimmer) {
         let mut map = self.devices.write().unwrap();
-        map.insert(device.id().to_string(), DevContainer::WebDimmer(device));
+        map.insert(device.id().to_string(), DeviceBox::WebDimmer(device));
     }
 }
 
 impl AddAssign<WebLed> for DeviceHandler {
     fn add_assign(&mut self, device: WebLed) {
         let mut map = self.devices.write().unwrap();
-        map.insert(device.id().to_string(), DevContainer::WebLed(device));
+        map.insert(device.id().to_string(), DeviceBox::WebLed(device));
     }
 }
