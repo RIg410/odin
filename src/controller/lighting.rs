@@ -1,33 +1,10 @@
 use super::Device;
-use controller::{Message, ControllerError};
 use std::sync::Arc;
 use std::sync::RwLock;
 use serial_channel::{SerialChannel, Cmd};
-use transport::MqttChannel;
 use std::fmt;
-
-#[derive(Debug)]
-pub struct MqttSpot {
-    id: Arc<String>,
-    state: Arc<RwLock<SpotState>>,
-    channel: MqttChannel,
-}
-
-impl MqttSpot {
-    pub fn new(id: &str, channel: MqttChannel) -> MqttSpot {
-        MqttSpot {
-            id: Arc::new(id.to_owned()),
-            state: Arc::new(RwLock::new(SpotState::new())),
-            channel,
-        }
-    }
-}
-
-impl Clone for MqttSpot {
-    fn clone(&self) -> Self {
-        MqttSpot { id: self.id.clone(), state: self.state.clone(), channel: self.channel.clone() }
-    }
-}
+use controller::ActionType;
+use web::WebController;
 
 #[derive(Debug, Eq, PartialEq)]
 struct SpotState {
@@ -39,55 +16,6 @@ impl SpotState {
     fn new() -> SpotState {
         SpotState { is_on: false, brightness: 100 }
     }
-
-    fn from_byte(byte: u8) -> SpotState {
-        let is_on = byte & 0b10000000u8 == 0b10000000u8;
-        let brightness = byte & 0b01111111u8;
-        SpotState { is_on, brightness }
-    }
-
-    fn payload(&self) -> u8 {
-        if self.is_on {
-            self.brightness | 0b10000000u8
-        } else {
-            self.brightness & 0b01111111u8
-        }
-    }
-}
-
-impl Device for MqttSpot {
-    fn is_on(&self) -> Result<bool, ControllerError> {
-        let state = self.state.read().unwrap();
-        Ok(state.is_on)
-    }
-
-    fn is_off(&self) -> Result<bool, ControllerError> {
-        self.is_on().map(|st| { !st })
-    }
-
-    fn on(&self) -> Result<(), ControllerError> {
-        let mut state = self.state.write().unwrap();
-        state.is_on = true;
-        Ok(())
-    }
-
-    fn off(&self) -> Result<(), ControllerError> {
-        let mut state = self.state.write().unwrap();
-        state.is_on = false;
-        Ok(())
-    }
-
-    fn toggle(&self) -> Result<bool, ControllerError> {
-        let mut state = self.state.write().unwrap();
-        state.is_on = !state.is_on;
-        Ok(state.is_on)
-    }
-
-    fn flush(&self) -> Result<(), ControllerError> {
-        let state = self.state.read().unwrap();
-        self.channel.publish(Message::new(&format!("/spot/{}", self.id), vec!(state.payload())))?;
-        Ok(())
-    }
 }
 
 pub struct SerialDimmer {
@@ -95,17 +23,68 @@ pub struct SerialDimmer {
     p_id: u8,
     channel: SerialChannel,
     state: Arc<RwLock<SpotState>>,
+    can_dim: bool,
 }
 
 impl Clone for SerialDimmer {
     fn clone(&self) -> Self {
-        SerialDimmer { id: self.id.clone(), p_id: self.p_id.clone(), channel: self.channel.clone(), state: self.state.clone() }
+        SerialDimmer { id: self.id.clone(), p_id: self.p_id.clone(), channel: self.channel.clone(), state: self.state.clone(), can_dim: self.can_dim.clone() }
     }
 }
 
 impl SerialDimmer {
-    pub fn new(id: &str, p_id: u8, channel: SerialChannel) -> SerialDimmer {
-        SerialDimmer { id: Arc::new(id.to_owned()), p_id, channel, state: Arc::new(RwLock::new(SpotState::new())) }
+    pub fn new(id: &str, p_id: u8, channel: SerialChannel, can_dim: bool) -> SerialDimmer {
+        SerialDimmer { id: Arc::new(id.to_owned()), p_id, channel, state: Arc::new(RwLock::new(SpotState::new())), can_dim }
+    }
+
+    fn flush(&self) {
+        let state = self.state.read().unwrap();
+        if self.can_dim {
+            let arg = if state.is_on {
+                invert_and_map(state.brightness)
+            } else {
+                255
+            };
+
+            self.channel.send(Cmd::new(0x01, self.p_id, arg));
+        } else {
+            let arg = if state.is_on {
+                0x01
+            } else {
+                0x02
+            };
+            self.channel.send(Cmd::new(0x02, self.p_id, arg));
+        }
+    }
+}
+
+impl Device for SerialDimmer {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn is_on(&self) -> bool {
+        let state = self.state.read().unwrap();
+        state.is_on
+    }
+
+    fn power(&self) -> u8 {
+        let state = self.state.read().unwrap();
+        state.brightness
+    }
+
+    fn switch(&self, action_type: &ActionType) {
+        let mut state = self.state.write().unwrap();
+        state.is_on = action_type == &ActionType::On;
+
+        self.flush()
+    }
+
+    fn set_power(&self, dim: u8) {
+        let mut state = self.state.write().unwrap();
+        state.brightness = dim;
+
+        self.flush()
     }
 }
 
@@ -115,45 +94,114 @@ impl fmt::Debug for SerialDimmer {
     }
 }
 
-impl Device for SerialDimmer {
-    fn is_on(&self) -> Result<bool, ControllerError> {
-        let state = self.state.read().unwrap();
-        Ok(state.is_on)
+pub struct WebDimmer {
+    pub id: Arc<String>,
+    state: Arc<RwLock<SpotState>>,
+    web: WebController
+}
+
+impl WebDimmer {
+    pub fn new(id: &str, web: WebController) -> WebDimmer {
+        WebDimmer {
+            id: Arc::new(id.to_owned()),
+            state: Arc::new(RwLock::new(SpotState::new())),
+            web
+        }
+    }
+}
+
+impl Device for WebDimmer {
+    fn id(&self) -> &str {
+        &self.id
     }
 
-    fn is_off(&self) -> Result<bool, ControllerError> {
-        self.is_on().map(|st| { !st })
+    fn is_on(&self) -> bool {
+        unimplemented!()
     }
 
-    fn on(&self) -> Result<(), ControllerError> {
-        let mut state = self.state.write().unwrap();
-        state.is_on = true;
-        Ok(())
+    fn power(&self) -> u8 {
+        unimplemented!()
     }
 
-    fn off(&self) -> Result<(), ControllerError> {
-        let mut state = self.state.write().unwrap();
-        state.is_on = false;
-        Ok(())
+    fn switch(&self, action_type: &ActionType) {
+        unimplemented!()
     }
 
-    fn toggle(&self) -> Result<bool, ControllerError> {
-        let mut state = self.state.write().unwrap();
-        state.is_on = !state.is_on;
-        Ok(state.is_on)
+    fn set_power(&self, power: u8) {
+        unimplemented!()
+    }
+}
+
+impl fmt::Debug for WebDimmer {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "WebDimmer {{ id: {}, state: {:?}}}", self.id, self.state)
+    }
+}
+
+impl Clone for WebDimmer {
+    fn clone(&self) -> Self {
+        WebDimmer { id: self.id.clone(), state: self.state.clone(), web: self.web.clone() }
+    }
+}
+
+pub type Color = (u8, u8, u8);
+pub type SpeedAndBrightness = (u8, u8);
+
+#[derive(Debug)]
+pub enum LedMode {
+    Color(Color),
+    Rainbow(SpeedAndBrightness),
+    Borealis(SpeedAndBrightness),
+}
+
+#[derive(Debug)]
+pub struct LedState {
+    on: bool,
+    mode: LedMode,
+}
+#[derive(Debug, Clone)]
+pub struct WebLed {
+    pub id: Arc<String>,
+    state: Arc<RwLock<LedState>>,
+    web: WebController
+}
+
+impl WebLed {
+    pub fn new(id: &str, web: WebController) -> WebLed {
+        WebLed {
+            id: Arc::new(id.to_owned()),
+            state: Arc::new(RwLock::new(LedState { on: false, mode: LedMode::Color((200, 200, 200)) })),
+            web
+        }
+    }
+}
+
+impl Device for WebLed {
+    fn id(&self) -> &str {
+        &self.id
     }
 
-    fn flush(&self) -> Result<(), ControllerError> {
-        let state = self.state.read().unwrap();
-        let arg = if state.is_on {
-            invert_and_map(state.brightness)
-        } else {
-            255
-        };
-
-        self.channel.send(Cmd::new(0x01, self.p_id, arg));
-        Ok(())
+    fn is_on(&self) -> bool {
+        unimplemented!()
     }
+
+    fn power(&self) -> u8 {
+        unimplemented!()
+    }
+
+    fn switch(&self, action_type: &ActionType) {
+        unimplemented!()
+    }
+
+    fn set_power(&self, power: u8) {
+        unimplemented!()
+    }
+}
+
+
+#[inline]
+fn map(x: u32, in_min: u32, in_max: u32, out_min: u32, out_max: u32) -> u32 {
+    (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 }
 
 #[inline]
@@ -162,100 +210,6 @@ fn invert_and_map(val: u8) -> u8 {
         255
     } else {
         map(100 - val as u32, 0, 100, 26, 229) as u8
-    }
-}
-
-#[inline]
-fn map(x: u32, in_min: u32, in_max: u32, out_min: u32, out_max: u32) -> u32 {
-    (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
-}
-
-pub struct SerialSpot {
-    id: Arc<String>,
-    p_id: u8,
-    channel: SerialChannel,
-    state: Arc<RwLock<SpotState>>,
-}
-
-impl SerialSpot {
-    pub fn new(id: &str, p_id: u8, channel: SerialChannel) -> SerialSpot {
-        SerialSpot { id: Arc::new(id.to_owned()), p_id, channel, state: Arc::new(RwLock::new(SpotState::new())) }
-    }
-}
-
-impl Device for SerialSpot {
-    fn is_on(&self) -> Result<bool, ControllerError> {
-        let state = self.state.read().unwrap();
-        Ok(state.is_on)
-    }
-
-    fn is_off(&self) -> Result<bool, ControllerError> {
-        self.is_on().map(|st| { !st })
-    }
-
-    fn on(&self) -> Result<(), ControllerError> {
-        let mut state = self.state.write().unwrap();
-        state.is_on = true;
-        Ok(())
-    }
-
-    fn off(&self) -> Result<(), ControllerError> {
-        let mut state = self.state.write().unwrap();
-        state.is_on = false;
-        Ok(())
-    }
-
-    fn toggle(&self) -> Result<bool, ControllerError> {
-        let mut state = self.state.write().unwrap();
-        state.is_on = !state.is_on;
-        Ok(state.is_on)
-    }
-
-    fn flush(&self) -> Result<(), ControllerError> {
-        let state = self.state.read().unwrap();
-        let arg = if state.is_on {
-            0x01
-        } else {
-            0x02
-        };
-        self.channel.send(Cmd::new(0x02, self.p_id, arg));
-        Ok(())
-    }
-}
-
-impl Clone for SerialSpot {
-    fn clone(&self) -> Self {
-        SerialSpot { id: self.id.clone(), p_id: self.p_id.clone(), channel: self.channel.clone(), state: self.state.clone() }
-    }
-}
-
-impl fmt::Debug for SerialSpot {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "SerialSpot {{ id: {}, p_id: {} state: {:?}}}", self.id, self.p_id, self.state)
-    }
-}
-
-
-pub trait Dimmer: Send + Sync {
-    fn set_dimm(&self, dimm: u8);
-    fn flush(&self);
-}
-
-impl Dimmer for SerialDimmer {
-    fn set_dimm(&self, dimm: u8) {
-        let mut state = self.state.write().unwrap();
-        state.brightness = dimm;
-    }
-
-    fn flush(&self) {
-        let state = self.state.read().unwrap();
-        let arg = if state.is_on {
-            invert_and_map(state.brightness)
-        } else {
-            255
-        };
-
-        self.channel.send(Cmd::new(0x01, self.p_id, arg));
     }
 }
 
