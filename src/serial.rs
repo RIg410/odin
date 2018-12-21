@@ -30,7 +30,7 @@ impl SerialChannel {
     pub fn make_port(&self) -> Option<TTYPort> {
         get_port_name()
             .and_then(|p| {
-                match serial::open(&p) {
+                match uart::open(&p) {
                     Ok(mut port) => {
                         if let Err(err) = port.configure(&SETTINGS) {
                             println!("Failed to config port [{}] {:?}", p, err);
