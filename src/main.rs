@@ -72,16 +72,16 @@ fn init_devices(web_controller: &WebController) -> DeviceHandler {
     let mut devices = DeviceHandler::new();
     let serial_channel = SerialChannel::new();
 
-    devices += SerialDimmer::new("bathroom_lamp", 0x01, serial_channel.clone(), true);
-    devices += SerialDimmer::new("corridor_lamp", 0x03, serial_channel.clone(), true);
-    devices += SerialDimmer::new("toilet_lamp", 0x02, serial_channel.clone(), true);
-    devices += SerialDimmer::new("kitchen_lamp", 0x04, serial_channel.clone(), true);
+    devices += SerialDimmer::new("bathroom_lamp", 0x01, serial_channel.clone(), true);//25-100
+    devices += SerialDimmer::new("corridor_lamp", 0x03, serial_channel.clone(), true); //0-100
+    devices += SerialDimmer::new("toilet_lamp", 0x02, serial_channel.clone(), true);//25-100
+    devices += SerialDimmer::new("kitchen_lamp", 0x04, serial_channel.clone(), true);//0-100
     devices += SerialDimmer::new("bedroom_lamp", 0x01, serial_channel.clone(), false);
     devices += SerialDimmer::new("lounge_lamp", 0x02, serial_channel.clone(), false);
     devices += SerialDimmer::new("device_3", 0x03, serial_channel.clone(), false);
-    devices += SerialDimmer::new("device_4", 0x04, serial_channel.clone(), false);
+    devices += SerialDimmer::new("bathroom_fun", 0x04, serial_channel.clone(), false);
     devices += SerialDimmer::new("device_5", 0x05, serial_channel.clone(), false);
-    devices += SerialDimmer::new("device_6", 0x06, serial_channel.clone(), false);
+    devices += SerialDimmer::new("lounge_cupboard_lamp", 0x06, serial_channel.clone(), false);
     devices += WebDimmer::new("bedroom_beam_bed_lamp", web_controller.clone());
     devices += WebDimmer::new("bedroom_beam_table_lamp", web_controller.clone());
     devices += WebDimmer::new("corridor_beam_lamp", web_controller.clone());
