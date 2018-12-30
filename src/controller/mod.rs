@@ -78,17 +78,17 @@ pub enum DeviceBox {
 impl DeviceBox {
     fn dev(&self) -> &Device {
         match self {
-            DeviceBox::SerialDimmer((dev, timer)) => dev,
-            DeviceBox::WebDimmer((dev, timer)) => dev,
-            DeviceBox::WebLed((dev, timer)) => dev,
+            DeviceBox::SerialDimmer((dev, _)) => dev,
+            DeviceBox::WebDimmer((dev, _)) => dev,
+            DeviceBox::WebLed((dev, _)) => dev,
         }
     }
 
     fn timer(&self) -> &Timer {
         match self {
-            DeviceBox::SerialDimmer((dev, timer)) => timer,
-            DeviceBox::WebDimmer((dev, timer)) => timer,
-            DeviceBox::WebLed((dev, timer)) => timer,
+            DeviceBox::SerialDimmer((_, timer)) => timer,
+            DeviceBox::WebDimmer((_, timer)) => timer,
+            DeviceBox::WebLed((_, timer)) => timer,
         }
     }
 

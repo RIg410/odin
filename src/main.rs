@@ -1,7 +1,6 @@
 extern crate serial as uart;
 extern crate actix_web;
 extern crate futures;
-extern crate futures_timer;
 
 mod controller;
 mod serial;
@@ -109,11 +108,11 @@ fn init_devices(web_controller: &WebController) -> DeviceHandler {
 }
 
 fn init_switch(devices: DeviceHandler) -> SwitchHandler {
-    let mut exit_devices = devices.clone();
-
+    let exit_devices = devices.clone();
     let corridor_lamp = devices.dev("corridor_lamp");
     let corridor_beam_lamp = devices.dev("corridor_beam_lamp");
-    SwitchHandler::new(vec![
+
+    let mut switch_list = vec![
         Switch::empty("corridor_2"),
         Switch::device("toilet", devices.dev("toilet_lamp")),
         Switch::device("bathroom", devices.dev("bathroom_lamp")),
@@ -141,12 +140,18 @@ fn init_switch(devices: DeviceHandler) -> SwitchHandler {
                 }
             });
         }),
-    ])
+    ];
+
+    switch_list.append(&mut init_sensor_switch(devices.clone()));
+    SwitchHandler::new(switch_list)
 }
 
 
-fn init_sensor_switch(devices: DeviceHandler) -> SwitchHandler {
-    Switch::lambda("ir_sensor_1", |t| {}); // first corridor sensor. dore
-
-    unimplemented!()
+fn init_sensor_switch(devices: DeviceHandler) -> Vec<Switch> {
+    vec![
+         Switch::lambda("ir_sensor_front_door", |t| {}),//x3
+         Switch::lambda("ir_sensor_bedroom_door", |t| {}),//x2
+         Switch::lambda("ir_sensor_middle", |t| {}),//x2
+         Switch::lambda("ir_sensor_living_room", |t| {}) //x2;
+    ]
 }

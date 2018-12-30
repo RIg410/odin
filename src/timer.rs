@@ -4,9 +4,6 @@ use std::{
     thread::JoinHandle,
     sync::atomic::AtomicBool,
 };
-use futures::prelude::*;
-use futures_timer::Delay;
-use futures::executor;
 use std::time::Instant;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -31,7 +28,7 @@ impl Timer {
         self.thread = Some(thread::spawn(move || {
             let start = Instant::now();
             loop {
-                thread::sleep_ms(100);
+                thread::sleep(Duration::from_millis(100));
                 if start.elapsed() < time {
                     continue;
                 }
@@ -42,7 +39,6 @@ impl Timer {
                 action();
                 return;
             }
-            ()
         }));
     }
 
