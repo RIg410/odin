@@ -4,6 +4,7 @@ use std::{
     collections::HashMap,
 };
 use controller::{ActionType, DeviceBox};
+use controller::Device;
 
 pub type Action = Fn(ActionType) + Sync + Send + 'static;
 
@@ -18,7 +19,7 @@ impl Switch {
         Switch { id: Arc::new(id.into().to_string()), act: Arc::new(|_| {}) }
     }
 
-    pub fn new<'a, ID, ACT>(id: ID, act: ACT) -> Switch
+    pub fn lambda<'a, ID, ACT>(id: ID, act: ACT) -> Switch
         where ID: Into<Cow<'a, str>>,
               ACT: Fn(ActionType) + Sync + Send + 'static {
         Switch { id: Arc::new(id.into().to_string()), act: Arc::new(act) }

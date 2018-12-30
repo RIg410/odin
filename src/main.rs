@@ -1,15 +1,19 @@
 extern crate serial as uart;
 extern crate actix_web;
 extern crate futures;
+extern crate futures_timer;
 
 mod controller;
 mod serial;
 mod web;
+mod timer;
 
 use serial::SerialChannel;
 use controller::{SerialDimmer, WebDimmer, Switch, SwitchHandler, DeviceHandler, WebLed, ActionType};
 use actix_web::{server, App, http, Path, State, Result as WebResult};
 use web::WebController;
+use controller::Device;
+use std::time::Duration;
 
 fn main() {
     let web_controller = WebController::new();
@@ -21,6 +25,7 @@ fn main() {
             .prefix("/odin/api")
             .resource("switch/{switch}/{state}", |r| r.method(http::Method::GET).with(switch_hndl))
             .resource("device/{device}/{state}/{power}", |r| r.method(http::Method::GET).with(device_hndl))
+            .resource("dimmer/{device}/{power}", |r| r.method(http::Method::GET).with(dimmer_hndl))
             .resource("reg-device/{ids}/{base_url}", |r| r.method(http::Method::GET).with(reg_device))
     })
         .bind("0.0.0.0:1884")
@@ -52,6 +57,12 @@ fn device_hndl((params, state): (Path<(String, String, u8)>, State<AppState>)) -
     } else {
         println!("Unknown state: {}", params.1);
     }
+    Ok("Ok".to_owned())
+}
+
+fn dimmer_hndl((params, state): (Path<(String, String, u8)>, State<AppState>)) -> WebResult<String> {
+    println!("device:{}, pow: {}", &params.0, &params.1);
+    state.devices.set_power(&params.0, params.2);
     Ok("Ok".to_owned())
 }
 
@@ -98,7 +109,10 @@ fn init_devices(web_controller: &WebController) -> DeviceHandler {
 }
 
 fn init_switch(devices: DeviceHandler) -> SwitchHandler {
-    let exit_devices = devices.clone();
+    let mut exit_devices = devices.clone();
+
+    let corridor_lamp = devices.dev("corridor_lamp");
+    let corridor_beam_lamp = devices.dev("corridor_beam_lamp");
     SwitchHandler::new(vec![
         Switch::empty("corridor_2"),
         Switch::device("toilet", devices.dev("toilet_lamp")),
@@ -111,7 +125,28 @@ fn init_switch(devices: DeviceHandler) -> SwitchHandler {
         Switch::device("kitchen_2", devices.dev("kitchen_beam_lamp")),
         Switch::empty("balcony_1"),
         Switch::empty("balcony_2"),
-        Switch::devices2("exit_1", devices.dev("corridor_lamp"), devices.dev("corridor_beam_lamp")),
-        Switch::new("exit_2", move |_| exit_devices.switch_all(ActionType::Off)),
+        Switch::lambda("exit_1", move |a| {
+            corridor_lamp.set_state(&a, 100);
+            corridor_beam_lamp.switch(&a);
+        }),
+        Switch::lambda("exit_2", move |_| {
+            exit_devices.for_each(|d| {
+                if d.id() != "corridor_lamp" {
+                    d.set_state(&ActionType::On, 5);
+                    d.delay(Duration::from_secs(30), |d| {
+                        d.switch(&ActionType::Off);
+                    });
+                } else {
+                    d.switch(&ActionType::Off)
+                }
+            });
+        }),
     ])
+}
+
+
+fn init_sensor_switch(devices: DeviceHandler) -> SwitchHandler {
+    Switch::lambda("ir_sensor_1", |t| {}); // first corridor sensor. dore
+
+    unimplemented!()
 }
