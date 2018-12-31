@@ -13,6 +13,9 @@ use actix_web::{server, App, http, Path, State, Result as WebResult};
 use web::WebController;
 use controller::Device;
 use std::time::Duration;
+use std::sync::Arc;
+use std::sync::Mutex;
+use controller::DeviceBox;
 
 fn main() {
     let web_controller = WebController::new();
@@ -148,10 +151,117 @@ fn init_switch(devices: DeviceHandler) -> SwitchHandler {
 
 
 fn init_sensor_switch(devices: DeviceHandler) -> Vec<Switch> {
+    let ir_front_door = IRHandler::new(&devices);
+    let ir_bedroom_door = ir_front_door.clone();
+    let ir_middle = ir_front_door.clone();
+    let ir_living_room = ir_front_door.clone();
     vec![
-         Switch::lambda("ir_sensor_front_door", |t| {}),//x3
-         Switch::lambda("ir_sensor_bedroom_door", |t| {}),//x2
-         Switch::lambda("ir_sensor_middle", |t| {}),//x2
-         Switch::lambda("ir_sensor_living_room", |t| {}) //x2;
+        Switch::lambda("ir_sensor_front_door", move |t| ir_front_door.on_front_door(t)),//x3
+        Switch::lambda("ir_sensor_bedroom_door", move |t| ir_bedroom_door.on_bedroom_door(t)),//x2
+        Switch::lambda("ir_sensor_middle", move |t| ir_middle.on_middle(t)),//x2
+        Switch::lambda("ir_sensor_living_room", move |t| ir_living_room.on_living_room(t)) //x2;
     ]
+}
+
+#[derive(Debug)]
+struct IRState {
+    front_door: bool,
+    bedroom_door: bool,
+    middle: bool,
+    living_room: bool,
+}
+
+impl IRState {
+    fn is_all_off(&self) -> bool {
+        !(self.front_door || self.bedroom_door || self.middle || self.living_room)
+    }
+}
+
+#[derive(Clone, Debug)]
+struct IRHandler {
+    state: Arc<Mutex<IRState>>,
+    corridor_lamp: DeviceBox,
+}
+
+impl IRHandler {
+    pub fn new(devices: &DeviceHandler) -> IRHandler {
+        IRHandler {
+            state: Arc::new(Mutex::new(
+                IRState {
+                    front_door: false,
+                    bedroom_door: false,
+                    middle: false,
+                    living_room: false,
+                })),
+            corridor_lamp: devices.dev("corridor_lamp"),
+        }
+    }
+
+    pub fn on_front_door(&self, action_type: ActionType) {
+        let mut state = self.state.lock().unwrap();
+        state.front_door = action_type == ActionType::On;
+
+        if action_type == ActionType::On {
+            if !self.corridor_lamp.is_on() {
+                self.corridor_lamp.set_state(&ActionType::On, 100);
+            }
+        } else {
+            if state.is_all_off() {
+                self.corridor_lamp.delay(Duration::from_secs(60), |d| {
+                    d.switch(&ActionType::Off);
+                });
+            }
+        }
+    }
+
+    pub fn on_bedroom_door(&self, action_type: ActionType) {
+        let mut state = self.state.lock().unwrap();
+        state.bedroom_door = action_type == ActionType::On;
+
+        if action_type == ActionType::On {
+            if !self.corridor_lamp.is_on() {
+                self.corridor_lamp.set_state(&ActionType::On, 50);
+            }
+        } else {
+            if state.is_all_off() {
+                self.corridor_lamp.delay(Duration::from_secs(60), |d| {
+                    d.switch(&ActionType::Off);
+                });
+            }
+        }
+    }
+
+    pub fn on_middle(&self, action_type: ActionType) {
+        let mut state = self.state.lock().unwrap();
+        state.middle = action_type == ActionType::On;
+
+        if action_type == ActionType::On {
+            if !self.corridor_lamp.is_on() {
+                self.corridor_lamp.set_state(&ActionType::On, 50);
+            }
+        } else {
+            if state.is_all_off() {
+                self.corridor_lamp.delay(Duration::from_secs(60), |d| {
+                    d.switch(&ActionType::Off);
+                });
+            }
+        }
+    }
+
+    pub fn on_living_room(&self, action_type: ActionType) {
+        let mut state = self.state.lock().unwrap();
+        state.living_room = action_type == ActionType::On;
+
+        if action_type == ActionType::On {
+            if !self.corridor_lamp.is_on() {
+                self.corridor_lamp.set_state(&ActionType::On, 50);
+            }
+        } else {
+            if state.is_all_off() {
+                self.corridor_lamp.delay(Duration::from_secs(60), |d| {
+                    d.switch(&ActionType::Off);
+                });
+            }
+        }
+    }
 }
