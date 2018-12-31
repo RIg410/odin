@@ -137,6 +137,7 @@ fn init_switch(devices: DeviceHandler) -> SwitchHandler {
                     d.set_state(&ActionType::On, 5);
                     d.delay(Duration::from_secs(30), |d| {
                         d.switch(&ActionType::Off);
+                        d.set_power(100);
                     });
                 } else {
                     d.switch(&ActionType::Off)

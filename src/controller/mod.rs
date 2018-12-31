@@ -254,13 +254,6 @@ impl AddAssign<WebLed> for DeviceHandler {
     }
 }
 
-impl SubAssign<&str> for DeviceHandler {
-    fn sub_assign(&mut self, rhs: &str) {
-        let mut devices = self.devices.write().unwrap();
-        devices.remove(rhs);
-    }
-}
-
 impl Debug for DeviceHandler {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "DeviceHandler:{:?}", self.devices.read().unwrap())
