@@ -2,8 +2,6 @@ use controller::SwitchHandler;
 use controller::DeviceHandler;
 use web::WebController;
 use std::thread;
-
-mod lora;
 mod web;
 
 #[derive(Clone)]
@@ -19,11 +17,6 @@ impl AppState {
     }
 }
 
-
 pub fn start_io(app_state: AppState) {
-    let lora_state = app_state.clone();
-    let join = thread::spawn(move|| {
-        lora::run_lora_ws(lora_state);
-    });
     web::run_web_service(app_state);
 }

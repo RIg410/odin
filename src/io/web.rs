@@ -36,9 +36,9 @@ fn device_hndl((params, state): (Path<(String, String, u8)>, State<AppState>)) -
     Ok("Ok".to_owned())
 }
 
-fn dimmer_hndl((params, state): (Path<(String, String, u8)>, State<AppState>)) -> WebResult<String> {
-    println!("device:{}, pow: {}", &params.0, &params.1);
-    state.devices.set_power(&params.0, params.2);
+fn dimmer_hndl((params, state): (Path<(String, u8)>, State<AppState>)) -> WebResult<String> {
+    println!("dimmer:{}, pow: {}", &params.0, &params.1);
+    state.devices.set_power(&params.0, params.1);
     Ok("Ok".to_owned())
 }
 

@@ -3,8 +3,6 @@ extern crate actix_web;
 extern crate futures;
 extern crate dotenv;
 extern crate tokio_core;
-extern crate hyper;
-extern crate paho_mqtt as mqtt;
 
 mod controller;
 mod serial;

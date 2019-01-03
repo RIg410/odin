@@ -1,5 +1,5 @@
 [package]
-name = "Lora"
+name = "lora"
 version = "0.1.0"
 authors = ["dyakushev <DYakushev@medlinesoft.ru>"]
 
@@ -8,6 +8,4 @@ serial="*"
 actix-web="*"
 futures="*"
 dotenv="*"
-hyper="*"
 tokio-core="*"
-paho-mqtt = "*"
