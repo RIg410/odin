@@ -1,9 +1,13 @@
 [package]
-name = "odin"
+name = "Lora"
 version = "0.1.0"
 authors = ["dyakushev <DYakushev@medlinesoft.ru>"]
 
 [dependencies]
-serial="0.4.0"
-actix-web="0.7.6"
-futures="0.1.24"
+serial="*"
+actix-web="*"
+futures="*"
+dotenv="*"
+hyper="*"
+tokio-core="*"
+paho-mqtt = "*"
