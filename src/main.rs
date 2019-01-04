@@ -49,6 +49,9 @@ fn init_devices(web_controller: &WebController) -> DeviceHandler {
     devices += WebDimmer::new("kitchen_beam_lamp", web_controller.clone());
     devices += WebDimmer::new("lounge_beam_bar_lamp", web_controller.clone());
     devices += WebDimmer::new("lounge_beam_main_lamp", web_controller.clone());
+    devices += WebDimmer::new("hot_water", web_controller.clone());
+    devices += WebDimmer::new("cold_water", web_controller.clone());
+    devices += WebDimmer::new("return_water", web_controller.clone());
     devices += WebLed::new("bedroom_beam_led", web_controller.clone());
     devices += WebLed::new("corridor_beam_led", web_controller.clone());
     devices += WebLed::new("kitchen_beam_led", web_controller.clone());
@@ -75,6 +78,7 @@ fn init_switch(devices: DeviceHandler) -> SwitchHandler {
         Switch::device("kitchen_2", devices.dev("kitchen_beam_lamp")),
         Switch::empty("balcony_1"),
         Switch::empty("balcony_2"),
+        Switch::devices3("water", devices.dev("hot_water"), devices.dev("cold_water"), devices.dev("return_water")),
         Switch::lambda("exit_1", move |a| {
             corridor_lamp.set_state(&a, 100);
             corridor_beam_lamp.switch(&a);

@@ -41,6 +41,18 @@ impl Switch {
         }
     }
 
+    pub fn devices3<'a, ID>(id: ID, dev_1: DeviceBox, dev_2: DeviceBox, dev_3: DeviceBox) -> Switch
+        where ID: Into<Cow<'a, str>> {
+        Switch {
+            id: Arc::new(id.into().to_string()),
+            act: Arc::new(move |t| {
+                dev_1.switch(&t);
+                dev_2.switch(&t);
+                dev_3.switch(&t);
+            }),
+        }
+    }
+
     pub fn id(&self) -> &str {
         &self.id
     }
