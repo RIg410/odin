@@ -69,6 +69,7 @@ fn init_switch(devices: DeviceHandler) -> SwitchHandler {
     let mut switch_list = vec![
         Switch::empty("corridor_2"),
         Switch::device("toilet", devices.dev("toilet_lamp")),
+        Switch::device("lounge_cupboard_switch", devices.dev("lounge_cupboard_lamp")),
         Switch::device("bathroom", devices.dev("bathroom_lamp")),
         Switch::device("bedroom_1", devices.dev("bedroom_lamp")),
         Switch::devices2("bedroom_2", devices.dev("bedroom_beam_bed_lamp"), devices.dev("bedroom_beam_table_lamp")),
@@ -85,6 +86,9 @@ fn init_switch(devices: DeviceHandler) -> SwitchHandler {
         }),
         Switch::lambda("exit_2", move |_| {
             exit_devices.for_each(|d| {
+                if d.id() == "hot_water" || d.id() == "cold_water" || d.id() == "return_water" {
+                    return;
+                }
                 if d.id() == "corridor_lamp" {
                     d.set_state(&ActionType::On, 5);
                     d.delay(Duration::from_secs(30), |d| {
