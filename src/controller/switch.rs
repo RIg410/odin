@@ -30,6 +30,11 @@ impl Switch {
         Switch { id: Arc::new(id.into().to_string()), act: Arc::new(move |t| dev.switch(&t)) }
     }
 
+    pub fn device_toggle<'a, ID>(id: ID, dev: DeviceBox) -> Switch
+        where ID: Into<Cow<'a, str>> {
+        Switch { id: Arc::new(id.into().to_string()), act: Arc::new(move |t| dev.toggle()) }
+    }
+
     pub fn devices2<'a, ID>(id: ID, dev_1: DeviceBox, dev_2: DeviceBox) -> Switch
         where ID: Into<Cow<'a, str>> {
         Switch {
@@ -37,6 +42,17 @@ impl Switch {
             act: Arc::new(move |t| {
                 dev_1.switch(&t);
                 dev_2.switch(&t);
+            }),
+        }
+    }
+
+    pub fn devices2_toggle<'a, ID>(id: ID, dev_1: DeviceBox, dev_2: DeviceBox) -> Switch
+        where ID: Into<Cow<'a, str>> {
+        Switch {
+            id: Arc::new(id.into().to_string()),
+            act: Arc::new(move |t| {
+                dev_1.toggle();
+                dev_2.toggle();
             }),
         }
     }
@@ -49,6 +65,18 @@ impl Switch {
                 dev_1.switch(&t);
                 dev_2.switch(&t);
                 dev_3.switch(&t);
+            }),
+        }
+    }
+
+    pub fn devices3_toggle<'a, ID>(id: ID, dev_1: DeviceBox, dev_2: DeviceBox, dev_3: DeviceBox) -> Switch
+        where ID: Into<Cow<'a, str>> {
+        Switch {
+            id: Arc::new(id.into().to_string()),
+            act: Arc::new(move |t| {
+                dev_1.toggle();
+                dev_2.toggle();
+                dev_3.toggle();
             }),
         }
     }

@@ -104,6 +104,14 @@ impl DeviceBox {
             action(&device);
         });
     }
+
+    pub fn toggle(&self) {
+        if self.is_on() {
+            self.switch(&ActionType::Off)
+        } else {
+            self.switch(&ActionType::On)
+        }
+    }
 }
 
 impl Device for DeviceBox {
