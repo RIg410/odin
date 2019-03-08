@@ -1,5 +1,6 @@
 use io::AppState;
 use actix_web::{server, App, http, Path, State, Result as WebResult};
+use chrono::Local;
 
 pub fn run_web_service(state: AppState) {
     server::new(move || {
@@ -9,6 +10,7 @@ pub fn run_web_service(state: AppState) {
             .resource("device/{device}/{state}/{power}", |r| r.method(http::Method::GET).with(device_hndl))
             .resource("dimmer/{device}/{power}", |r| r.method(http::Method::GET).with(dimmer_hndl))
             .resource("reg-device/{ids}/{base_url}", |r| r.method(http::Method::GET).with(reg_device))
+            .resource("time", |r| r.method(http::Method::GET).with(get_time))
     })
         .bind("0.0.0.0:1884")
         .expect("Can not bind to port 1884")
@@ -53,4 +55,9 @@ fn reg_device((params, state): (Path<(String, String)>, State<AppState>)) -> Web
 
     state.web_controller.reg_device(ids, host);
     Ok("Ok".to_owned())
+}
+
+fn get_time(state: State<AppState>) -> WebResult<String> {
+    let time = Local::now();
+    Ok(time.to_rfc2822())
 }

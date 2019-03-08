@@ -1,21 +1,23 @@
 use super::Device;
 use std::{
     sync::{Arc, RwLock},
-    fmt
+    fmt,
 };
 use serial::{SerialChannel, Cmd};
 use controller::ActionType;
 use web::WebController;
+use thread;
 
 #[derive(Debug, Eq, PartialEq)]
 struct SpotState {
     is_on: bool,
     brightness: u8,
+    old_brightness: u8,
 }
 
 impl SpotState {
     fn new() -> SpotState {
-        SpotState { is_on: false, brightness: 100 }
+        SpotState { is_on: false, brightness: 100, old_brightness: 0 }
     }
 }
 
@@ -25,29 +27,80 @@ pub struct SerialDimmer {
     channel: SerialChannel,
     state: Arc<RwLock<SpotState>>,
     can_dim: bool,
+    min: usize,
+    max: usize,
 }
 
 impl Clone for SerialDimmer {
     fn clone(&self) -> Self {
-        SerialDimmer { id: self.id.clone(), p_id: self.p_id.clone(), channel: self.channel.clone(), state: self.state.clone(), can_dim: self.can_dim.clone() }
+        SerialDimmer {
+            id: self.id.clone(),
+            p_id: self.p_id.clone(),
+            channel: self.channel.clone(),
+            state: self.state.clone(),
+            can_dim: self.can_dim.clone(),
+            min: self.min,
+            max: self.max,
+        }
     }
 }
 
 impl SerialDimmer {
-    pub fn new(id: &str, p_id: u8, channel: SerialChannel, can_dim: bool) -> SerialDimmer {
-        SerialDimmer { id: Arc::new(id.to_owned()), p_id, channel, state: Arc::new(RwLock::new(SpotState::new())), can_dim }
+    pub fn switch(id: &str, p_id: u8, channel: SerialChannel) -> SerialDimmer {
+        SerialDimmer {
+            id: Arc::new(id.to_owned()),
+            p_id,
+            channel,
+            state: Arc::new(RwLock::new(SpotState::new())),
+            can_dim: false,
+            min: 0,
+            max: 100,
+        }
+    }
+
+    pub fn dimmer(id: &str, p_id: u8, channel: SerialChannel, min: usize, max: usize) -> SerialDimmer {
+        SerialDimmer {
+            id: Arc::new(id.to_owned()),
+            p_id,
+            channel,
+            state: Arc::new(RwLock::new(SpotState::new())),
+            can_dim: true,
+            min,
+            max,
+        }
     }
 
     fn flush(&self) {
-        let state = self.state.read().unwrap();
-        if self.can_dim {
-            let arg = if state.is_on {
-                invert_and_map(state.brightness)
-            } else {
-                255
-            };
+        let mut state = self.state.write().unwrap();
 
-            self.channel.send(Cmd::new(0x01, self.p_id, arg));
+        if self.can_dim {
+            loop {
+                let arg = if state.is_on {
+                    invert_and_map(map(state.old_brightness as u32, 0, 100, self.min as u32, self.max as u32) as u8)
+                } else {
+                    255
+                };
+
+                self.channel.send(Cmd::new(0x01, self.p_id, arg));
+                if state.old_brightness == state.brightness {
+                    return;
+                }
+                thread::sleep_ms(50);
+
+                if state.old_brightness < state.brightness {
+                    if state.brightness - state.old_brightness <= 2 {
+                        state.old_brightness = state.brightness;
+                    } else {
+                        state.old_brightness += 2;
+                    }
+                } else {
+                    if state.old_brightness - state.brightness <= 2 {
+                        state.old_brightness = state.brightness;
+                    } else {
+                        state.old_brightness -= 2;
+                    }
+                }
+            }
         } else {
             let arg = if state.is_on {
                 0x01
@@ -85,6 +138,7 @@ impl Device for SerialDimmer {
     fn set_power(&self, dim: u8) {
         {
             let mut state = self.state.write().unwrap();
+            state.old_brightness = state.brightness;
             state.brightness = dim;
         }
         self.flush()
@@ -93,6 +147,7 @@ impl Device for SerialDimmer {
     fn set_state(&self, action_type: &ActionType, power: u8) {
         {
             let mut state = self.state.write().unwrap();
+            state.old_brightness = state.brightness;
             state.brightness = power;
             state.is_on = action_type == &ActionType::On;
         }
@@ -272,18 +327,6 @@ fn invert_and_map(val: u8) -> u8 {
     } else {
         map(100 - val as u32, 0, 100, 26, 229) as u8
     }
-}
-
-#[test]
-fn test_spot_state() {
-    let spot = SpotState { is_on: false, brightness: 40 };
-    assert_eq!(spot, SpotState::from_byte(spot.payload()));
-
-    let spot = SpotState { is_on: true, brightness: 100 };
-    assert_eq!(spot, SpotState::from_byte(spot.payload()));
-
-    let spot = SpotState { is_on: true, brightness: 0 };
-    assert_eq!(spot, SpotState::from_byte(spot.payload()));
 }
 
 #[test]

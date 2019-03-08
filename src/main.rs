@@ -3,6 +3,7 @@ extern crate actix_web;
 extern crate futures;
 extern crate dotenv;
 extern crate tokio_core;
+extern crate chrono;
 
 mod controller;
 mod serial;
@@ -16,7 +17,9 @@ use web::WebController;
 use controller::Device;
 use std::time::Duration;
 use std::sync::Arc;
-use std::sync::Mutex;
+use std::sync::{
+    Mutex, RwLock
+};
 use controller::DeviceBox;
 use io::AppState;
 use std::thread;
@@ -34,16 +37,18 @@ fn init_devices(web_controller: &WebController) -> DeviceHandler {
     let mut devices = DeviceHandler::new();
     let serial_channel = SerialChannel::new();
 
-    devices += SerialDimmer::new("bathroom_lamp", 0x01, serial_channel.clone(), true);//25-100
-    devices += SerialDimmer::new("corridor_lamp", 0x03, serial_channel.clone(), true); //0-100
-    devices += SerialDimmer::new("toilet_lamp", 0x02, serial_channel.clone(), true);//25-100
-    devices += SerialDimmer::new("kitchen_lamp", 0x04, serial_channel.clone(), true);//0-100
-    devices += SerialDimmer::new("bedroom_lamp", 0x01, serial_channel.clone(), false);
-    devices += SerialDimmer::new("lounge_lamp", 0x02, serial_channel.clone(), false);
-    devices += SerialDimmer::new("toilet_fun", 0x03, serial_channel.clone(), false);
-    devices += SerialDimmer::new("bathroom_fun", 0x04, serial_channel.clone(), false);
-    devices += SerialDimmer::new("device_5", 0x05, serial_channel.clone(), false);
-    devices += SerialDimmer::new("lounge_cupboard_lamp", 0x06, serial_channel.clone(), false);
+    devices += SerialDimmer::dimmer("bathroom_lamp", 0x01, serial_channel.clone(), 20, 100);
+    devices += SerialDimmer::dimmer("corridor_lamp", 0x03, serial_channel.clone(), 1, 100);
+    devices += SerialDimmer::dimmer("toilet_lamp", 0x02, serial_channel.clone(), 25, 100);
+    devices += SerialDimmer::dimmer("kitchen_lamp", 0x04, serial_channel.clone(), 0, 100);
+
+    devices += SerialDimmer::switch("bedroom_lamp", 0x01, serial_channel.clone());
+    devices += SerialDimmer::switch("lounge_lamp", 0x02, serial_channel.clone());
+    devices += SerialDimmer::switch("toilet_fun", 0x03, serial_channel.clone());
+    devices += SerialDimmer::switch("bathroom_fun", 0x04, serial_channel.clone());
+    devices += SerialDimmer::switch("device_5", 0x05, serial_channel.clone());
+    devices += SerialDimmer::switch("lounge_cupboard_lamp", 0x06, serial_channel.clone());
+
     devices += WebDimmer::new("bedroom_beam_bed_lamp", web_controller.clone());
     devices += WebDimmer::new("bedroom_beam_table_lamp", web_controller.clone());
     devices += WebDimmer::new("corridor_beam_lamp", web_controller.clone());
@@ -69,9 +74,23 @@ fn init_switch(devices: DeviceHandler) -> SwitchHandler {
     let corridor_lamp = devices.dev("corridor_lamp");
     let corridor_beam_lamp = devices.dev("corridor_beam_lamp");
 
+    let toilet_lamp = devices.dev("toilet_lamp");
+    let toilet_fun = devices.dev("toilet_fun");
+
     let mut switch_list = vec![
         Switch::empty("corridor_2"),
-        Switch::device("toilet", devices.dev("toilet_lamp")),
+        Switch::lambda("toilet", move |a| {
+            toilet_lamp.switch(&a);
+
+            if a == ActionType::On {
+                toilet_fun.switch(&ActionType::Off);
+            } else {
+                toilet_fun.switch(&ActionType::On);
+                toilet_fun.delay(Duration::from_secs(120), |d| {
+                    d.switch(&ActionType::Off);
+                });
+            }
+        }),
         Switch::device("lounge_cupboard_switch", devices.dev("lounge_cupboard_lamp")),
         Switch::device("bathroom", devices.dev("bathroom_lamp")),
         Switch::device("bedroom_1", devices.dev("bedroom_lamp")),
@@ -126,6 +145,8 @@ fn init_sensor_switch(devices: DeviceHandler) -> Vec<Switch> {
     ]
 }
 
+use chrono::prelude::*;
+
 #[derive(Debug)]
 struct IRState {
     front_door: bool,
@@ -133,6 +154,7 @@ struct IRState {
     middle: bool,
     living_room: bool,
     corridor_lamp: bool,
+    stamp: StampedSwitch,
 }
 
 impl IRState {
@@ -148,7 +170,6 @@ impl IRState {
 #[derive(Clone, Debug)]
 struct IRHandler {
     state: Arc<Mutex<IRState>>,
-    corridor_lamp: DeviceBox,
 }
 
 impl IRHandler {
@@ -161,47 +182,119 @@ impl IRHandler {
                     middle: false,
                     living_room: false,
                     corridor_lamp: false,
+                    stamp: StampedSwitch::new(devices.dev("corridor_lamp")),
                 })),
-            corridor_lamp: devices.dev("corridor_lamp"),
         }
-
     }
 
     pub fn on_front_door(&self, action_type: ActionType) {
         let mut state = self.state.lock().unwrap();
-        state.front_door = action_type == ActionType::On;
-        self.handle_corridor_lamp(&mut state);
+        state.stamp.send(StampMessage::On(2 * 60 * 1000));
     }
 
     pub fn on_bedroom_door(&self, action_type: ActionType) {
         let mut state = self.state.lock().unwrap();
-        state.bedroom_door = action_type == ActionType::On;
-        self.handle_corridor_lamp(&mut state);
+        state.stamp.send(StampMessage::On(2 * 60 * 1000));
     }
 
     pub fn on_middle(&self, action_type: ActionType) {
         let mut state = self.state.lock().unwrap();
-        state.middle = action_type == ActionType::On;
-        self.handle_corridor_lamp(&mut state);
+        state.stamp.send(StampMessage::On(2 * 60 * 1000));
     }
 
     pub fn on_living_room(&self, action_type: ActionType) {
         let mut state = self.state.lock().unwrap();
-        state.living_room = action_type == ActionType::On;
-        self.handle_corridor_lamp(&mut state);
+        state.stamp.send(StampMessage::On(2 * 60 * 1000));
+    }
+}
+
+
+use std::sync::mpsc::channel;
+use std::time::SystemTime;
+use std::sync::mpsc::Sender;
+use std::thread::JoinHandle;
+
+#[derive(Debug)]
+struct StampedSwitch {
+    rx: Sender<StampMessage>,
+    thread: JoinHandle<()>,
+}
+
+impl StampedSwitch {
+    fn new(dev: DeviceBox) -> StampedSwitch {
+        let (rx, tx) = channel::<StampMessage>();
+
+        let thread = thread::spawn(move || {
+            let mut off_time = time();
+            loop {
+                if dev.is_on() {
+                    if let Ok(val) = tx.recv_timeout(Duration::from_secs(1)) {
+                        match val {
+                            StampMessage::On(offset) => {
+                                off_time = time() + offset;
+                            }
+                            StampMessage::Off(_) => {
+                                // NO-op
+                            }
+                        }
+                    }
+
+                    if off_time < time() {
+                        dev.set_state(&ActionType::Off, 0);
+                    }
+                } else {
+                    if let Ok(val) = tx.recv() {
+                        match val {
+                            StampMessage::On(offset) => {
+                                dev.set_state(&ActionType::On, StampedSwitch::calc_power());
+                                off_time = time() + offset;
+                            }
+                            StampMessage::Off(_) => {
+                                // NO-op
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        StampedSwitch {
+            rx,
+            thread,
+        }
     }
 
-    pub fn handle_corridor_lamp(&self, state: &mut IRState) {
-        if state.is_some_on() && !state.corridor_lamp {
-            state.corridor_lamp = true;
-
-            return;
+    fn calc_power() -> u8 {
+        let time = Local::now();
+        if time.hour() >= 22 || time.hour() <= 5 {
+            return 1;
+        }
+        if time.hour() >= 21 {
+            return 20;
+        }
+        if time.hour() >= 20 || time.hour() <= 7 {
+            return 50;
         }
 
-        if state.is_all_off() && state.corridor_lamp {
-            state.corridor_lamp = false;
+        return 100;
+    }
 
-            return;
+
+    fn send(&self, msg: StampMessage) {
+        let time = Local::now();
+        if time.hour() > 17 || time.hour() < 10 {
+            self.rx.send(msg);
         }
     }
+}
+
+fn time() -> u128 {
+    SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).ok()
+        .map(|d| d.as_secs() as u128 * 1000 + d.subsec_millis() as u128)
+        .unwrap_or(0)
+}
+
+enum StampMessage {
+    On(u128),
+    Off(u128),
 }
