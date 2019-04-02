@@ -36,9 +36,9 @@ impl WebController {
         }
     }
 
-    pub fn send(&self, id: &str, args: String) {
+    pub fn send(&self, id: &str, arg: &str, arg2: &str) {
         if let Some(host) = self.host(id) {
-            let url = format!("http://{}/{}?args={}", &host, id, args);
+            let url = format!("http://{}/{}?arg_1={}&arg_2={}", &host, id, arg, arg2);
             println!("req => {:?}", url);
             actix::spawn(
                 client::get(url)

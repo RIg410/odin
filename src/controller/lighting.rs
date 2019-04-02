@@ -179,7 +179,8 @@ impl WebDimmer {
     pub fn flush(&self) {
         let state = self.state.read().unwrap();
         let switch = if state.is_on { "ON" } else { "OFF" };
-        self.web.send(&self.id, format!("{}:{}", switch, state.brightness));
+        let arg = format!("{}:{}", switch, state.brightness);
+        self.web.send(&self.id, &arg, &arg);
     }
 }
 
@@ -276,7 +277,8 @@ impl WebLed {
     pub fn flush(&self) {
         let state = self.state.read().unwrap();
         let switch = if state.is_on { "ON" } else { "OFF" };
-        self.web.send(&self.id, format!("{}:{}", switch, state.mode.arg()));
+        let arg = format!("{}:{}", switch, state.mode.arg());
+        self.web.send(&self.id, &arg, &arg);
     }
 }
 
@@ -344,7 +346,8 @@ impl WebBeam {
         let state = self.state.read().unwrap();
         let spot_state = if state.is_spot_on { "ON" } else { "OFF" };
         let led_stat = if state.led_state.is_on { "ON" } else { "OFF" };
-        self.web.send(&self.id, format!("{}:{}:{}", spot_state, led_stat, state.led_state.mode.arg()));
+        let arg = format!("{}:{}:{}", spot_state, led_stat, state.led_state.mode.arg());
+        self.web.send(&self.id, &arg, &arg);
     }
 }
 
