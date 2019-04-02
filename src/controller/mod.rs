@@ -2,7 +2,7 @@ mod lighting;
 mod switch;
 
 pub use controller::{
-    lighting::{SerialDimmer, WebDimmer, WebLed},
+    lighting::{SerialDimmer, WebDimmer, WebLed, WebBeam},
     switch::{Switch, SwitchHandler},
 };
 use std::{
@@ -28,7 +28,7 @@ pub trait Device: Send + Sync + Debug {
     fn set_state(&self, action_type: &ActionType, power: u8);
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum ActionType {
     On,
     Off,
@@ -72,6 +72,7 @@ pub enum DeviceBox {
     SerialDimmer((SerialDimmer, Timer)),
     WebDimmer((WebDimmer, Timer)),
     WebLed((WebLed, Timer)),
+    WebBeam((WebBeam, Timer))
 }
 
 impl DeviceBox {
@@ -80,6 +81,7 @@ impl DeviceBox {
             DeviceBox::SerialDimmer((dev, _)) => dev,
             DeviceBox::WebDimmer((dev, _)) => dev,
             DeviceBox::WebLed((dev, _)) => dev,
+            DeviceBox::WebBeam((dev, _)) => dev,
         }
     }
 
@@ -88,6 +90,7 @@ impl DeviceBox {
             DeviceBox::SerialDimmer((_, timer)) => timer,
             DeviceBox::WebDimmer((_, timer)) => timer,
             DeviceBox::WebLed((_, timer)) => timer,
+            DeviceBox::WebBeam((_, timer)) => timer,
         }
     }
 
@@ -258,6 +261,13 @@ impl AddAssign<WebLed> for DeviceHandler {
     fn add_assign(&mut self, device: WebLed) {
         let mut map = self.devices.write().unwrap();
         map.insert(device.id().to_string(), DeviceBox::WebLed((device, timer())));
+    }
+}
+
+impl AddAssign<WebBeam> for DeviceHandler {
+    fn add_assign(&mut self, device: WebBeam) {
+        let mut map = self.devices.write().unwrap();
+        map.insert(device.id().to_string(), DeviceBox::WebBeam((device, timer())));
     }
 }
 

@@ -46,11 +46,11 @@ impl Clone for SerialDimmer {
 }
 
 impl SerialDimmer {
-    pub fn switch(id: &str, p_id: u8, channel: SerialChannel) -> SerialDimmer {
+    pub fn switch(id: &str, p_id: u8, channel: &SerialChannel) -> SerialDimmer {
         SerialDimmer {
             id: Arc::new(id.to_owned()),
             p_id,
-            channel,
+            channel: channel.clone(),
             state: Arc::new(RwLock::new(SpotState::new())),
             can_dim: false,
             min: 0,
@@ -58,11 +58,11 @@ impl SerialDimmer {
         }
     }
 
-    pub fn dimmer(id: &str, p_id: u8, channel: SerialChannel, min: usize, max: usize) -> SerialDimmer {
+    pub fn dimmer(id: &str, p_id: u8, channel: &SerialChannel, min: usize, max: usize) -> SerialDimmer {
         SerialDimmer {
             id: Arc::new(id.to_owned()),
             p_id,
-            channel,
+            channel: channel.clone(),
             state: Arc::new(RwLock::new(SpotState::new())),
             can_dim: true,
             min,
@@ -168,11 +168,11 @@ pub struct WebDimmer {
 }
 
 impl WebDimmer {
-    pub fn new(id: &str, web: WebController) -> WebDimmer {
+    pub fn new(id: &str, web: &WebController) -> WebDimmer {
         WebDimmer {
             id: Arc::new(id.to_owned()),
             state: Arc::new(RwLock::new(SpotState::new())),
-            web,
+            web: web.clone(),
         }
     }
 
@@ -265,11 +265,11 @@ pub struct WebLed {
 }
 
 impl WebLed {
-    pub fn new(id: &str, web: WebController) -> WebLed {
+    pub fn new(id: &str, web: &WebController) -> WebLed {
         WebLed {
             id: Arc::new(id.to_owned()),
-            state: Arc::new(RwLock::new(LedState { is_on: false, mode: LedMode::Color((200, 200, 200)) })),
-            web,
+            state: Arc::new(RwLock::new(LedState { is_on: false, mode: LedMode::Rainbow((100, 100)) })),
+            web: web.clone(),
         }
     }
 
@@ -312,6 +312,68 @@ impl Device for WebLed {
             state.is_on = action_type == &ActionType::On;
         }
         self.flush()
+    }
+}
+
+#[derive(Debug)]
+struct BeamState {
+    led_state: LedState,
+    is_spot_on: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct WebBeam {
+    pub id: Arc<String>,
+    state: Arc<RwLock<BeamState>>,
+    web: WebController,
+}
+
+impl WebBeam {
+    pub fn new(id: &str, web: &WebController) -> WebBeam {
+        WebBeam {
+            id: Arc::new(id.to_owned()),
+            state: Arc::new(RwLock::new(BeamState {
+                led_state: LedState { is_on: false, mode: LedMode::Rainbow((100, 100)) },
+                is_spot_on: false,
+            })),
+            web: web.clone(),
+        }
+    }
+
+    pub fn flush(&self) {
+        let state = self.state.read().unwrap();
+        let spot_state = if state.is_spot_on { "ON" } else { "OFF" };
+        let led_stat = if state.led_state.is_on { "ON" } else { "OFF" };
+        self.web.send(&self.id, format!("{}:{}:{}", spot_state, led_stat, state.led_state.mode.arg()));
+    }
+}
+
+impl Device for WebBeam {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn is_on(&self) -> bool {
+        self.state.read().unwrap().is_spot_on
+    }
+
+    fn power(&self) -> u8 {
+        0
+    }
+
+    fn switch(&self, action_type: &ActionType) {
+        {
+            let mut state = self.state.write().unwrap();
+            state.is_spot_on = action_type == &ActionType::On;
+            state.led_state.is_on = action_type == &ActionType::On;
+        }
+        self.flush();
+    }
+
+    fn set_power(&self, power: u8) {}
+
+    fn set_state(&self, action_type: &ActionType, power: u8) {
+        self.switch(action_type);
     }
 }
 

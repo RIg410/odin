@@ -12,13 +12,13 @@ mod timer;
 mod io;
 
 use serial::SerialChannel;
-use controller::{SerialDimmer, WebDimmer, Switch, SwitchHandler, DeviceHandler, WebLed, ActionType};
+use controller::{SerialDimmer, WebDimmer, Switch, SwitchHandler, DeviceHandler, WebLed, ActionType, WebBeam};
 use web::WebController;
 use controller::Device;
 use std::time::Duration;
 use std::sync::Arc;
 use std::sync::{
-    Mutex, RwLock
+    Mutex, RwLock,
 };
 use controller::DeviceBox;
 use io::AppState;
@@ -28,6 +28,7 @@ fn main() {
     dotenv::dotenv().ok();
     let web_controller = WebController::new();
     let devices = init_devices(&web_controller);
+    println!("devices: {:?}", devices);
     let switch_handler = init_switch(devices.clone());
     let app_state = AppState::new(switch_handler, devices, web_controller);
     io::start_io(app_state);
@@ -37,42 +38,37 @@ fn init_devices(web_controller: &WebController) -> DeviceHandler {
     let mut devices = DeviceHandler::new();
     let serial_channel = SerialChannel::new();
 
-    devices += SerialDimmer::dimmer("bathroom_lamp", 0x01, serial_channel.clone(), 20, 100);
-    devices += SerialDimmer::dimmer("corridor_lamp", 0x03, serial_channel.clone(), 1, 100);
-    devices += SerialDimmer::dimmer("toilet_lamp", 0x02, serial_channel.clone(), 25, 100);
-    devices += SerialDimmer::dimmer("kitchen_lamp", 0x04, serial_channel.clone(), 0, 100);
+    devices += SerialDimmer::dimmer("bathroom_lamp", 0x01, &serial_channel, 20, 100);
+    devices += SerialDimmer::dimmer("corridor_lamp", 0x03, &serial_channel, 1, 100);
+    devices += SerialDimmer::dimmer("toilet_lamp", 0x02, &serial_channel, 25, 100);
+    devices += SerialDimmer::dimmer("kitchen_lamp", 0x04, &serial_channel, 0, 100);
 
-    devices += SerialDimmer::switch("bedroom_lamp", 0x01, serial_channel.clone());
-    devices += SerialDimmer::switch("lounge_lamp", 0x02, serial_channel.clone());
-    devices += SerialDimmer::switch("toilet_fun", 0x03, serial_channel.clone());
-    devices += SerialDimmer::switch("bathroom_fun", 0x04, serial_channel.clone());
-    devices += SerialDimmer::switch("device_5", 0x05, serial_channel.clone());
-    devices += SerialDimmer::switch("lounge_cupboard_lamp", 0x06, serial_channel.clone());
+    devices += SerialDimmer::switch("bedroom_lamp", 0x01, &serial_channel);
+    devices += SerialDimmer::switch("lounge_lamp", 0x02, &serial_channel);
+    devices += SerialDimmer::switch("toilet_fun", 0x03, &serial_channel);
+    devices += SerialDimmer::switch("bathroom_fun", 0x04, &serial_channel);
+    devices += SerialDimmer::switch("device_5", 0x05, &serial_channel);
+    devices += SerialDimmer::switch("lounge_cupboard_lamp", 0x06, &serial_channel);
 
-    devices += WebDimmer::new("bedroom_beam_bed_lamp", web_controller.clone());
-    devices += WebDimmer::new("bedroom_beam_table_lamp", web_controller.clone());
-    devices += WebDimmer::new("corridor_beam_lamp", web_controller.clone());
-    devices += WebDimmer::new("kitchen_beam_lamp", web_controller.clone());
-    devices += WebDimmer::new("lounge_beam_bar_lamp", web_controller.clone());
-    devices += WebDimmer::new("lounge_beam_main_lamp", web_controller.clone());
-    devices += WebDimmer::new("hot_water", web_controller.clone());
-    devices += WebDimmer::new("cold_water", web_controller.clone());
-    devices += WebDimmer::new("return_water", web_controller.clone());
-    devices += WebLed::new("bedroom_beam_led", web_controller.clone());
-    devices += WebLed::new("corridor_beam_led", web_controller.clone());
-    devices += WebLed::new("kitchen_beam_led", web_controller.clone());
-    devices += WebLed::new("lounge_beam_bar_led", web_controller.clone());
-    devices += WebLed::new("lounge_beam_main_led", web_controller.clone());
+    devices += WebDimmer::new("hot_water", &web_controller);
+    devices += WebDimmer::new("cold_water", &web_controller);
+    devices += WebDimmer::new("return_water", &web_controller);
+
+    devices += WebBeam::new("kitchen_beam", &web_controller);
+    devices += WebBeam::new("bedroom_beam_bed", &web_controller);
+    devices += WebBeam::new("bedroom_beam_table", &web_controller);
+    devices += WebBeam::new("corridor_beam", &web_controller);
+    devices += WebBeam::new("lounge_beam", &web_controller);
 
     devices
 }
+
 // return_water - это холодная вода
 // cold_water <-> return_water
-
 fn init_switch(devices: DeviceHandler) -> SwitchHandler {
     let exit_devices = devices.clone();
     let corridor_lamp = devices.dev("corridor_lamp");
-    let corridor_beam_lamp = devices.dev("corridor_beam_lamp");
+    let corridor_beam_lamp = devices.dev("corridor_beam");
 
     let toilet_lamp = devices.dev("toilet_lamp");
     let toilet_fun = devices.dev("toilet_fun");
@@ -86,7 +82,7 @@ fn init_switch(devices: DeviceHandler) -> SwitchHandler {
                 toilet_fun.switch(&ActionType::Off);
             } else {
                 toilet_fun.switch(&ActionType::On);
-                toilet_fun.delay(Duration::from_secs(120), |d| {
+                toilet_fun.delay(Duration::from_secs(60 * 5), |d| {
                     d.switch(&ActionType::Off);
                 });
             }
@@ -94,11 +90,11 @@ fn init_switch(devices: DeviceHandler) -> SwitchHandler {
         Switch::device("lounge_cupboard_switch", devices.dev("lounge_cupboard_lamp")),
         Switch::device("bathroom", devices.dev("bathroom_lamp")),
         Switch::device("bedroom_1", devices.dev("bedroom_lamp")),
-        Switch::devices2("bedroom_2", devices.dev("bedroom_beam_bed_lamp"), devices.dev("bedroom_beam_table_lamp")),
+        Switch::devices2("bedroom_2", devices.dev("bedroom_beam_bed"), devices.dev("bedroom_beam_table")),
         Switch::device("lounge_1", devices.dev("lounge_lamp")),
-        Switch::device("lounge_2", devices.dev("lounge_beam_main_lamp")),
-        Switch::devices2("kitchen_1", devices.dev("kitchen_lamp"), devices.dev("lounge_beam_bar_lamp")),
-        Switch::device("kitchen_2", devices.dev("kitchen_beam_lamp")),
+        Switch::device("lounge_2", devices.dev("lounge_beam")),
+        Switch::device("kitchen_1", devices.dev("kitchen_lamp")),
+        Switch::device("kitchen_2", devices.dev("kitchen_beam")),
         Switch::empty("balcony_1"),
         Switch::empty("balcony_2"),
         Switch::devices3("water", devices.dev("hot_water"), devices.dev("cold_water"), devices.dev("return_water")),
@@ -136,12 +132,12 @@ fn init_sensor_switch(devices: DeviceHandler) -> Vec<Switch> {
     let ir_living_room = ir_front_door.clone();
     let ir_living_room_1 = ir_front_door.clone();
     vec![
-        Switch::lambda("ir_sensor_front_door", move |t| ir_front_door.on_front_door(t)),//x3
-        Switch::lambda("ir_sensor_bedroom_door", move |t| ir_bedroom_door.on_bedroom_door(t)),//x2
-        Switch::lambda("ir_sensor_middle", move |t| ir_middle.on_middle(t)),//x2
-        Switch::lambda("ir_sensor_middle_1", move |t| ir_middle_1.on_middle(t)),//x2
-        Switch::lambda("ir_sensor_living_room", move |t| ir_living_room.on_living_room(t)), //x2;
-        Switch::lambda("ir_sensor_living_room_1", move |t| ir_living_room_1.on_living_room(t)) //x2;
+        Switch::lambda("ir_sensor_front_door", move |t| ir_front_door.on_front_door(t)),
+        Switch::lambda("ir_sensor_bedroom_door", move |t| ir_bedroom_door.on_bedroom_door(t)),
+        Switch::lambda("ir_sensor_middle", move |t| ir_middle.on_middle(t)),
+        Switch::lambda("ir_sensor_middle_1", move |t| ir_middle_1.on_middle(t)),
+        Switch::lambda("ir_sensor_living_room", move |t| ir_living_room.on_living_room(t)),
+        Switch::lambda("ir_sensor_living_room_1", move |t| ir_living_room_1.on_living_room(t))
     ]
 }
 
@@ -189,25 +185,24 @@ impl IRHandler {
 
     pub fn on_front_door(&self, action_type: ActionType) {
         let mut state = self.state.lock().unwrap();
-        state.stamp.send(StampMessage::On(2 * 60 * 1000));
+        state.stamp.send(StampMessage::On(5 * 60 * 1000, SensorName::FrontDoor));
     }
 
     pub fn on_bedroom_door(&self, action_type: ActionType) {
         let mut state = self.state.lock().unwrap();
-        state.stamp.send(StampMessage::On(2 * 60 * 1000));
+        state.stamp.send(StampMessage::On(2 * 60 * 1000, SensorName::BedroomDoor));
     }
 
     pub fn on_middle(&self, action_type: ActionType) {
         let mut state = self.state.lock().unwrap();
-        state.stamp.send(StampMessage::On(2 * 60 * 1000));
+        state.stamp.send(StampMessage::On(2 * 60 * 1000, SensorName::Middle));
     }
 
     pub fn on_living_room(&self, action_type: ActionType) {
         let mut state = self.state.lock().unwrap();
-        state.stamp.send(StampMessage::On(2 * 60 * 1000));
+        state.stamp.send(StampMessage::On(2 * 60 * 1000, SensorName::LivingRoom));
     }
 }
-
 
 use std::sync::mpsc::channel;
 use std::time::SystemTime;
@@ -230,10 +225,10 @@ impl StampedSwitch {
                 if dev.is_on() {
                     if let Ok(val) = tx.recv_timeout(Duration::from_secs(1)) {
                         match val {
-                            StampMessage::On(offset) => {
+                            StampMessage::On(offset, sensor) => {
                                 off_time = time() + offset;
                             }
-                            StampMessage::Off(_) => {
+                            StampMessage::Off => {
                                 // NO-op
                             }
                         }
@@ -245,11 +240,11 @@ impl StampedSwitch {
                 } else {
                     if let Ok(val) = tx.recv() {
                         match val {
-                            StampMessage::On(offset) => {
-                                dev.set_state(&ActionType::On, StampedSwitch::calc_power());
+                            StampMessage::On(offset, sensor) => {
+                                dev.set_state(&ActionType::On, StampedSwitch::calc_power(sensor));
                                 off_time = time() + offset;
                             }
-                            StampMessage::Off(_) => {
+                            StampMessage::Off => {
                                 // NO-op
                             }
                         }
@@ -264,26 +259,30 @@ impl StampedSwitch {
         }
     }
 
-    fn calc_power() -> u8 {
-        let time = Local::now();
-        if time.hour() >= 22 || time.hour() <= 5 {
-            return 1;
+    fn calc_power(sensor: SensorName) -> u8 {
+        if sensor == SensorName::FrontDoor {
+            100
+        } else {
+            let time = Local::now();
+            if time.hour() >= 22 || time.hour() <= 5 {
+                1
+            } else {
+                100
+            }
         }
-        if time.hour() >= 21 {
-            return 20;
-        }
-        if time.hour() >= 20 || time.hour() <= 7 {
-            return 50;
-        }
-
-        return 100;
     }
-
 
     fn send(&self, msg: StampMessage) {
         let time = Local::now();
         if time.hour() > 17 || time.hour() < 10 {
             self.rx.send(msg);
+        } else {
+            match msg {
+                StampMessage::On(_, SensorName::FrontDoor) => {
+                    self.rx.send(msg);
+                }
+                _ => {}
+            }
         }
     }
 }
@@ -294,7 +293,16 @@ fn time() -> u128 {
         .unwrap_or(0)
 }
 
+
+#[derive(Ord, PartialOrd, Eq, PartialEq, Debug)]
+enum SensorName {
+    LivingRoom,
+    Middle,
+    BedroomDoor,
+    FrontDoor,
+}
+
 enum StampMessage {
-    On(u128),
-    Off(u128),
+    On(u128, SensorName),
+    Off,
 }
