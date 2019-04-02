@@ -73,10 +73,17 @@ fn init_switch(devices: DeviceHandler) -> SwitchHandler {
     let toilet_lamp = devices.dev("toilet_lamp");
     let toilet_fun = devices.dev("toilet_fun");
 
+    let corridor_lamp_toilet_copy = corridor_lamp.clone();
     let mut switch_list = vec![
         Switch::empty("corridor_2"),
         Switch::lambda("toilet", move |a| {
-            toilet_lamp.switch(&a);
+            let power = if corridor_lamp_toilet_copy.is_on() {
+                corridor_lamp_toilet_copy.power()
+            } else {
+                100
+            };
+
+            toilet_lamp.set_state(&a, power);
 
             if a == ActionType::On {
                 toilet_fun.switch(&ActionType::Off);
