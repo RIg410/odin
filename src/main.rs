@@ -6,14 +6,16 @@ extern crate tokio_core;
 extern crate chrono;
 
 mod controller;
-mod serial;
-mod web;
+mod transport;
 mod timer;
-mod io;
+mod web;
+mod home;
+mod devices;
+mod sensors;
 
-use serial::SerialChannel;
+use transport::serial::SerialChannel;
 use controller::{SerialDimmer, WebDimmer, Switch, SwitchHandler, DeviceHandler, WebLed, ActionType, WebBeam};
-use web::WebController;
+use transport::web::WebChannel;
 use controller::Device;
 use std::time::Duration;
 use std::sync::Arc;
@@ -21,27 +23,30 @@ use std::sync::{
     Mutex, RwLock,
 };
 use controller::DeviceBox;
-use io::AppState;
+use web::AppState;
 use std::thread;
 
 fn main() {
     dotenv::dotenv().ok();
-    let web_controller = WebController::new();
+    let transport = Transport::create();
+    let home = Home::new(&transport);
+    println!("home: {:?}", home);
+
+    let web_controller = WebChannel::new();
     let devices = init_devices(&web_controller);
-    println!("devices: {:?}", devices);
     let switch_handler = init_switch(devices.clone());
     let app_state = AppState::new(switch_handler, devices, web_controller);
-    io::start_io(app_state);
+    web::start_io(app_state);
 }
 
-fn init_devices(web_controller: &WebController) -> DeviceHandler {
+fn init_devices(web_controller: &WebChannel) -> DeviceHandler {
     let mut devices = DeviceHandler::new();
     let serial_channel = SerialChannel::new();
 
     devices += SerialDimmer::dimmer("bathroom_lamp", 0x01, &serial_channel, 20, 100);
     devices += SerialDimmer::dimmer("corridor_lamp", 0x03, &serial_channel, 1, 100);
     devices += SerialDimmer::dimmer("toilet_lamp", 0x02, &serial_channel, 25, 100);
-    devices += SerialDimmer::dimmer("kitchen_lamp", 0x04, &serial_channel, 0, 100);
+    devices += SerialDimmer::dimmer("kitchen_lamp", 0x04, &serial_channel, 1, 100);
 
     devices += SerialDimmer::switch("bedroom_lamp", 0x01, &serial_channel);
     devices += SerialDimmer::switch("lounge_lamp", 0x02, &serial_channel);
@@ -215,6 +220,8 @@ use std::sync::mpsc::channel;
 use std::time::SystemTime;
 use std::sync::mpsc::Sender;
 use std::thread::JoinHandle;
+use transport::Transport;
+use home::Home;
 
 #[derive(Debug)]
 struct StampedSwitch {

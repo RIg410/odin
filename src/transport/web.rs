@@ -8,13 +8,13 @@ use actix_web::{actix, client};
 use futures::future::Future;
 
 #[derive(Debug)]
-pub struct WebController {
+pub struct WebChannel {
     devices: Arc<RwLock<HashMap<String, Arc<String>>>>
 }
 
-impl WebController {
-    pub fn new() -> WebController {
-        WebController {
+impl WebChannel {
+    pub fn new() -> WebChannel {
+        WebChannel {
             devices: Arc::new(RwLock::new(HashMap::new()))
         }
     }
@@ -55,8 +55,8 @@ impl WebController {
     }
 }
 
-impl Clone for WebController {
+impl Clone for WebChannel {
     fn clone(&self) -> Self {
-        WebController { devices: self.devices.clone() }
+        WebChannel { devices: self.devices.clone() }
     }
 }

@@ -3,9 +3,9 @@ use std::{
     sync::{Arc, RwLock},
     fmt,
 };
-use serial::{SerialChannel, Cmd};
+use transport::serial::{SerialChannel, Cmd};
 use controller::ActionType;
-use web::WebController;
+use transport::web::WebChannel;
 use thread;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -164,11 +164,11 @@ impl fmt::Debug for SerialDimmer {
 pub struct WebDimmer {
     pub id: Arc<String>,
     state: Arc<RwLock<SpotState>>,
-    web: WebController,
+    web: WebChannel,
 }
 
 impl WebDimmer {
-    pub fn new(id: &str, web: &WebController) -> WebDimmer {
+    pub fn new(id: &str, web: &WebChannel) -> WebDimmer {
         WebDimmer {
             id: Arc::new(id.to_owned()),
             state: Arc::new(RwLock::new(SpotState::new())),
@@ -262,11 +262,11 @@ pub struct LedState {
 pub struct WebLed {
     pub id: Arc<String>,
     state: Arc<RwLock<LedState>>,
-    web: WebController,
+    web: WebChannel,
 }
 
 impl WebLed {
-    pub fn new(id: &str, web: &WebController) -> WebLed {
+    pub fn new(id: &str, web: &WebChannel) -> WebLed {
         WebLed {
             id: Arc::new(id.to_owned()),
             state: Arc::new(RwLock::new(LedState { is_on: false, mode: LedMode::Rainbow((100, 100)) })),
@@ -327,11 +327,11 @@ struct BeamState {
 pub struct WebBeam {
     pub id: Arc<String>,
     state: Arc<RwLock<BeamState>>,
-    web: WebController,
+    web: WebChannel,
 }
 
 impl WebBeam {
-    pub fn new(id: &str, web: &WebController) -> WebBeam {
+    pub fn new(id: &str, web: &WebChannel) -> WebBeam {
         WebBeam {
             id: Arc::new(id.to_owned()),
             state: Arc::new(RwLock::new(BeamState {

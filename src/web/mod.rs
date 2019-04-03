@@ -1,6 +1,6 @@
 use controller::SwitchHandler;
 use controller::DeviceHandler;
-use web::WebController;
+use transport::web::WebChannel;
 use std::thread;
 mod web;
 
@@ -8,11 +8,11 @@ mod web;
 pub struct AppState {
     pub switch: SwitchHandler,
     pub devices: DeviceHandler,
-    pub web_controller: WebController,
+    pub web_controller: WebChannel,
 }
 
 impl AppState {
-    pub fn new(switch_handler: SwitchHandler, devices: DeviceHandler, web_controller: WebController) -> AppState {
+    pub fn new(switch_handler: SwitchHandler, devices: DeviceHandler, web_controller: WebChannel) -> AppState {
         AppState { switch: switch_handler.clone(), devices: devices.clone(), web_controller: web_controller.clone() }
     }
 }
