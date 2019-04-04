@@ -31,12 +31,7 @@ fn main() {
     let transport = Transport::create();
     let home = Home::new(&transport);
     println!("home: {:?}", home);
-
-    let web_controller = WebChannel::new();
-    let devices = init_devices(&web_controller);
-    let switch_handler = init_switch(devices.clone());
-    let app_state = AppState::new(switch_handler, devices, web_controller);
-    web::start_io(app_state);
+    web::start_io(AppState::new(home, transport));
 }
 
 fn init_devices(web_controller: &WebChannel) -> DeviceHandler {

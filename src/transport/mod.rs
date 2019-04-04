@@ -1,4 +1,4 @@
-use transport::serial::SerialChannel;
+use transport::serial::{SerialChannel, Cmd};
 use std::fmt::{Debug, Formatter, Error};
 use transport::web::WebChannel;
 
@@ -18,6 +18,10 @@ impl Transport {
             serial: SerialChannel::new(),
             web: WebChannel::new(),
         }
+    }
+
+    pub fn serial_write(&self, cmd: Cmd) {
+        self.serial.send(cmd);
     }
 }
 

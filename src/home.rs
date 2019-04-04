@@ -1,5 +1,5 @@
 use transport::Transport;
-use devices::{SerialSwitch, WebBeam, SerialDimmer};
+use devices::{SerialSwitch, WebBeam, SerialDimmer, WebSwitch};
 use sensors::{Switch, ActionType};
 
 #[derive(Debug)]
@@ -162,11 +162,13 @@ impl Toilet {
     fn on_switch(this: &Home, action_type: ActionType) {}
 }
 
-
 #[derive(Debug)]
 pub struct Bathroom {
     lamp: SerialDimmer,
     fun: SerialSwitch,
+    hot_water: WebSwitch,
+    cold_water: WebSwitch,
+    return_water: WebSwitch,
     switch: Switch,
 }
 
@@ -175,6 +177,9 @@ impl Bathroom {
         Bathroom {
             lamp: SerialDimmer::new(tr, "bedroom_lamp", 0x01, 20, 100),
             fun: SerialSwitch::new(tr, "bathroom_fun", 0x04),
+            hot_water: WebSwitch::new(tr, "hot_water"),
+            cold_water: WebSwitch::new(tr, "cold_water"),
+            return_water: WebSwitch::new(tr, "return_water"),
             switch: Switch::new("toilet", Bathroom::on_switch),
         }
     }
