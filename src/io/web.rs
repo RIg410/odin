@@ -10,6 +10,7 @@ pub fn run_web_service(state: AppState) {
             .resource("device/{device}/{state}/{power}", |r| r.method(http::Method::GET).with(device_hndl))
             .resource("dimmer/{device}/{power}", |r| r.method(http::Method::GET).with(dimmer_hndl))
             .resource("reg-device/{ids}/{base_url}", |r| r.method(http::Method::GET).with(reg_device))
+            .resource("device", |r| r.method(http::Method::GET).with(get_device))
             .resource("time", |r| r.method(http::Method::GET).with(get_time))
     })
         .bind("0.0.0.0:1884")
@@ -55,6 +56,12 @@ fn reg_device((params, state): (Path<(String, String)>, State<AppState>)) -> Web
 
     state.web_controller.reg_device(ids, host);
     Ok("Ok".to_owned())
+}
+
+/// 0 - ids (id_1:id_2:id_3)
+/// 1 - base_url (host:port)
+fn get_device(state: State<AppState>) -> WebResult<String> {
+    Ok(format!("{:?}", state.web_controller))
 }
 
 fn get_time(state: State<AppState>) -> WebResult<String> {
