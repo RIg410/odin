@@ -1,7 +1,7 @@
-use transport::Transport;
+use io::IO;
 use sensors::ActionType;
 use std::sync::atomic::{AtomicBool, Ordering};
-use transport::serial::Cmd;
+use io::Cmd;
 use std::sync::Mutex;
 
 pub trait Flush {
@@ -17,16 +17,15 @@ pub trait Switch {
 pub struct SerialSwitch {
     id: String,
     p_id: u8,
-    transport: Transport,
-
+    io: IO,
     is_on: AtomicBool,
 }
 
 impl SerialSwitch {
-    pub fn new(transport: &Transport, id: &str, p_id: u8) -> SerialSwitch {
+    pub fn new(io: &IO, id: &str, p_id: u8) -> SerialSwitch {
         SerialSwitch {
             id: id.to_owned(),
-            transport: transport.clone(),
+            io: io.clone(),
             p_id,
             is_on: AtomicBool::new(false),
         }
@@ -40,7 +39,7 @@ impl Flush for SerialSwitch {
         } else {
             0x02
         };
-        self.transport.serial_write(Cmd::new(0x02, self.p_id, arg));
+        self.io.serial_write(Cmd::new(0x02, self.p_id, arg));
     }
 }
 
@@ -48,17 +47,17 @@ impl Flush for SerialSwitch {
 pub struct SerialDimmer {
     id: String,
     p_id: u8,
-    transport: Transport,
+    io: IO,
     min_value: u8,
     max_value: u8,
     state: Mutex<DimmerState>,
 }
 
 impl SerialDimmer {
-    pub fn new(transport: &Transport, id: &str, p_id: u8, min_value: u8, max_value: u8) -> SerialDimmer {
+    pub fn new(io: &IO, id: &str, p_id: u8, min_value: u8, max_value: u8) -> SerialDimmer {
         SerialDimmer {
             id: id.to_owned(),
-            transport: transport.clone(),
+            io: io.clone(),
             p_id,
             min_value,
             max_value,
@@ -89,21 +88,21 @@ impl Flush for SerialDimmer {
             255
         };
 
-        self.transport.serial_write(Cmd::new(0x01, self.p_id, arg));
+        self.io.serial_write(Cmd::new(0x01, self.p_id, arg));
     }
 }
 
 #[derive(Debug)]
 pub struct WebSwitch {
     id: String,
-    transport: Transport,
+    io: IO,
     is_on: AtomicBool,
 }
 
 impl WebSwitch {
-    pub fn new(transport: &Transport, id: &str) -> WebSwitch {
+    pub fn new(io: &IO, id: &str) -> WebSwitch {
         WebSwitch {
-            transport: transport.clone(),
+            io: io.clone(),
             id: id.to_owned(),
             is_on: AtomicBool::new(false),
         }
@@ -113,15 +112,15 @@ impl WebSwitch {
 #[derive(Debug)]
 pub struct WebBeam {
     id: String,
-    transport: Transport,
+    io: IO,
 
     is_on: AtomicBool,
 }
 
 impl WebBeam {
-    pub fn new(transport: &Transport, id: &str) -> WebBeam {
+    pub fn new(io: &IO, id: &str) -> WebBeam {
         WebBeam {
-            transport: transport.clone(),
+            io: io.clone(),
             id: id.to_owned(),
             is_on: AtomicBool::new(false),
         }

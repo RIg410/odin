@@ -1,24 +1,23 @@
-use controller::SwitchHandler;
-use controller::DeviceHandler;
-use transport::web::WebChannel;
+//use controller::DeviceHandler;
+//use io::web::WebChannel;
 use std::thread;
 use home::Home;
 use std::sync::Arc;
-use transport::Transport;
+use io::IO;
 
 mod web;
 
 #[derive(Clone)]
 pub struct AppState {
     pub home: Arc<Home>,
-    pub transport: Transport,
+    pub io: IO,
 }
 
 impl AppState {
-    pub fn new(home: Home, transport: Transport) -> AppState {
+    pub fn new(home: Home, io: IO) -> AppState {
         AppState {
             home: Arc::new(home),
-            transport
+            io
         }
     }
 }

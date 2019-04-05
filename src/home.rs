@@ -1,4 +1,4 @@
-use transport::Transport;
+use io::IO;
 use devices::{SerialSwitch, WebBeam, SerialDimmer, WebSwitch};
 use sensors::{Switch, ActionType};
 
@@ -14,15 +14,15 @@ pub struct Home {
 }
 
 impl Home {
-    pub fn new(tr: &Transport) -> Home {
+    pub fn new(io: &mut IO) -> Home {
         Home {
-            bad_room: BadRoom::new(tr),
-            living_room: LivingRoom::new(tr),
-            kitchen: Kitchen::new(tr),
-            balcony: Balcony::new(tr),
-            corridor: Corridor::new(tr),
-            toilet: Toilet::new(tr),
-            bathroom: Bathroom::new(tr),
+            bad_room: BadRoom::new(io),
+            living_room: LivingRoom::new(io),
+            kitchen: Kitchen::new(io),
+            balcony: Balcony::new(io),
+            corridor: Corridor::new(io),
+            toilet: Toilet::new(io),
+            bathroom: Bathroom::new(io),
         }
     }
 }
@@ -41,13 +41,13 @@ pub struct LivingRoom {
 }
 
 impl LivingRoom {
-    pub fn new(tr: &Transport) -> LivingRoom {
+    pub fn new(io: &mut IO) -> LivingRoom {
         LivingRoom {
-            chandelier: SerialSwitch::new(tr, "living_room_lamp", 0x02),
-            cupboard_lamp: SerialSwitch::new(tr, "cupboard_lamp", 0x06),
-            beam: WebBeam::new(tr, "lounge_beam"),
-            switch_1: Switch::new("lounge_1", LivingRoom::on_switch_1),
-            switch_2: Switch::new("lounge_2", LivingRoom::on_switch_2),
+            chandelier: SerialSwitch::new(io, "living_room_lamp", 0x02),
+            cupboard_lamp: SerialSwitch::new(io, "cupboard_lamp", 0x06),
+            beam: WebBeam::new(io, "lounge_beam"),
+            switch_1: Switch::new(io,"lounge_1", LivingRoom::on_switch_1),
+            switch_2: Switch::new(io,"lounge_2", LivingRoom::on_switch_2),
         }
     }
 
@@ -66,12 +66,12 @@ pub struct Kitchen {
 }
 
 impl Kitchen {
-    pub fn new(tr: &Transport) -> Kitchen {
+    pub fn new(io: &mut IO) -> Kitchen {
         Kitchen {
-            beam: WebBeam::new(tr, "kitchen_beam"),
-            kitchen_lamp: SerialDimmer::new(tr, "kitchen_lamp", 0x04, 1, 100),
-            switch_1: Switch::new("kitchen_1", Kitchen::on_kitchen_switch_1),
-            switch_2: Switch::new("kitchen_2", Kitchen::on_kitchen_switch_2),
+            beam: WebBeam::new(io, "kitchen_beam"),
+            kitchen_lamp: SerialDimmer::new(io, "kitchen_lamp", 0x04, 1, 100),
+            switch_1: Switch::new(io,"kitchen_1", Kitchen::on_kitchen_switch_1),
+            switch_2: Switch::new(io,"kitchen_2", Kitchen::on_kitchen_switch_2),
         }
     }
 
@@ -90,11 +90,11 @@ pub struct Balcony {
 }
 
 impl Balcony {
-    pub fn new(tr: &Transport) -> Balcony {
+    pub fn new(io: &mut IO) -> Balcony {
         Balcony {
-            chandelier: SerialSwitch::new(tr, "balcony_lamp", 0x05),
-            switch_1: Switch::new("balcony_1", Balcony::on_balcony_switch_1),
-            switch_2: Switch::new("balcony_2", Balcony::on_balcony_switch_2),
+            chandelier: SerialSwitch::new(io, "balcony_lamp", 0x05),
+            switch_1: Switch::new(io,"balcony_1", Balcony::on_balcony_switch_1),
+            switch_2: Switch::new(io,"balcony_2", Balcony::on_balcony_switch_2),
         }
     }
 
@@ -118,18 +118,18 @@ pub struct Corridor {
 }
 
 impl Corridor {
-    pub fn new(tr: &Transport) -> Corridor {
+    pub fn new(io: &mut IO) -> Corridor {
         Corridor {
-            lamp: SerialDimmer::new(tr, "corridor_lamp", 0x03, 1, 100),
-            beam: WebBeam::new(tr, "corridor_beam"),
-            exit_1: Switch::new("exit_1", Corridor::on_exit_1),
-            exit_2: Switch::new("exit_2", Corridor::on_exit_2),
-            ir_sensor_front_door: Switch::new("ir_sensor_front_door", Corridor::ir_sensor_front_door),
-            ir_sensor_bedroom_door: Switch::new("ir_sensor_bedroom_door", Corridor::ir_sensor_bedroom_door),
-            ir_sensor_middle: Switch::new("ir_sensor_middle", Corridor::ir_sensor_middle),
-            ir_sensor_middle_1: Switch::new("ir_sensor_middle_1", Corridor::ir_sensor_middle_1),
-            ir_sensor_living_room: Switch::new("ir_sensor_living_room", Corridor::ir_sensor_living_room),
-            ir_sensor_living_room_1: Switch::new("ir_sensor_living_room_1", Corridor::ir_sensor_living_room_1),
+            lamp: SerialDimmer::new(io, "corridor_lamp", 0x03, 1, 100),
+            beam: WebBeam::new(io, "corridor_beam"),
+            exit_1: Switch::new(io,"exit_1", Corridor::on_exit_1),
+            exit_2: Switch::new(io,"exit_2", Corridor::on_exit_2),
+            ir_sensor_front_door: Switch::new(io,"ir_sensor_front_door", Corridor::ir_sensor_front_door),
+            ir_sensor_bedroom_door: Switch::new(io,"ir_sensor_bedroom_door", Corridor::ir_sensor_bedroom_door),
+            ir_sensor_middle: Switch::new(io,"ir_sensor_middle", Corridor::ir_sensor_middle),
+            ir_sensor_middle_1: Switch::new(io,"ir_sensor_middle_1", Corridor::ir_sensor_middle_1),
+            ir_sensor_living_room: Switch::new(io,"ir_sensor_living_room", Corridor::ir_sensor_living_room),
+            ir_sensor_living_room_1: Switch::new(io,"ir_sensor_living_room_1", Corridor::ir_sensor_living_room_1),
         }
     }
 
@@ -151,11 +151,11 @@ pub struct Toilet {
 }
 
 impl Toilet {
-    pub fn new(tr: &Transport) -> Toilet {
+    pub fn new(io: &mut IO) -> Toilet {
         Toilet {
-            lamp: SerialDimmer::new(tr, "toilet_lamp", 0x02, 25, 100),
-            fun: SerialSwitch::new(tr, "toilet_fun", 0x03),
-            switch: Switch::new("toilet", Toilet::on_switch),
+            lamp: SerialDimmer::new(io, "toilet_lamp", 0x02, 25, 100),
+            fun: SerialSwitch::new(io, "toilet_fun", 0x03),
+            switch: Switch::new(io,"toilet", Toilet::on_switch),
         }
     }
 
@@ -173,14 +173,14 @@ pub struct Bathroom {
 }
 
 impl Bathroom {
-    pub fn new(tr: &Transport) -> Bathroom {
+    pub fn new(io: &mut IO) -> Bathroom {
         Bathroom {
-            lamp: SerialDimmer::new(tr, "bedroom_lamp", 0x01, 20, 100),
-            fun: SerialSwitch::new(tr, "bathroom_fun", 0x04),
-            hot_water: WebSwitch::new(tr, "hot_water"),
-            cold_water: WebSwitch::new(tr, "cold_water"),
-            return_water: WebSwitch::new(tr, "return_water"),
-            switch: Switch::new("toilet", Bathroom::on_switch),
+            lamp: SerialDimmer::new(io, "bedroom_lamp", 0x01, 20, 100),
+            fun: SerialSwitch::new(io, "bathroom_fun", 0x04),
+            hot_water: WebSwitch::new(io, "hot_water"),
+            cold_water: WebSwitch::new(io, "cold_water"),
+            return_water: WebSwitch::new(io, "return_water"),
+            switch: Switch::new(io,"toilet", Bathroom::on_switch),
         }
     }
 
@@ -197,12 +197,12 @@ pub struct BadRoom {
 }
 
 impl BadRoom {
-    pub fn new(tr: &Transport) -> BadRoom {
+    pub fn new(io: &mut IO) -> BadRoom {
         BadRoom {
-            chandelier: SerialSwitch::new(tr, "bedroom_lamp", 0x01),
-            beam: WebBeam::new(tr, "bedroom_beam"),
-            switch_1: Switch::new("bedroom_1", BadRoom::on_switch_1),
-            switch_2: Switch::new("bedroom_1", BadRoom::on_switch_2),
+            chandelier: SerialSwitch::new(io, "bedroom_lamp", 0x01),
+            beam: WebBeam::new(io, "bedroom_beam"),
+            switch_1: Switch::new(io,"bedroom_1", BadRoom::on_switch_1),
+            switch_2: Switch::new(io,"bedroom_1", BadRoom::on_switch_2),
         }
     }
 

@@ -3,6 +3,8 @@ use std::string::ToString;
 use home::Home;
 use std::fmt::{Debug, Formatter, Error};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use io::IO;
 
 pub type Action = Fn(&Home, ActionType) + Sync + Send + 'static;
 
@@ -12,20 +14,24 @@ pub trait OnSwitch {
     fn toggle(&self, home: &Home);
 }
 
+#[derive(Clone)]
 pub struct Switch {
-    id: String,
-    action: Box<Action>,
-    is_on: AtomicBool,
+    pub id: Arc<String>,
+    action: Arc<Action>,
+    is_on: Arc<AtomicBool>,
 }
 
 impl Switch {
-    pub fn new<A>(id: &str, act: A) -> Switch
+    pub fn new<A>(io: &mut IO, id: &str, act: A) -> Switch
         where A: Fn(&Home, ActionType) + Sync + Send + 'static {
-        Switch {
-            id: id.to_string(),
-            action: Box::new(act),
-            is_on: AtomicBool::new(false),
-        }
+        let switch = Switch {
+            id: Arc::new(id.to_string()),
+            action: Arc::new(act),
+            is_on: Arc::new(AtomicBool::new(false)),
+        };
+
+        io.reg_sensor(switch.clone());
+        switch
     }
 
     fn action(&self, home: &Home) {
