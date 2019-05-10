@@ -1,9 +1,7 @@
-//use controller::DeviceHandler;
-//use io::web::WebChannel;
-use std::thread;
 use home::Home;
 use std::sync::Arc;
 use io::IO;
+use std::collections::HashMap;
 
 mod web;
 
@@ -19,6 +17,10 @@ impl AppState {
             home: Arc::new(home),
             io
         }
+    }
+
+    pub fn update_device(&self, name: &str, state: HashMap<String, String>) -> Result<(), String> {
+        self.io.devices.update_device(name, state)
     }
 }
 

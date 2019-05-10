@@ -1,8 +1,5 @@
 //use super::Device;
-use std::{
-    sync::{Arc, RwLock},
-    fmt,
-};
+
 //use io::serial::{SerialChannel, Cmd};
 //use controller::ActionType;
 //use io::web::WebChannel;

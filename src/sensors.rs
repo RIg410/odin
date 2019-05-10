@@ -1,4 +1,3 @@
-use std::borrow::ToOwned;
 use std::string::ToString;
 use home::Home;
 use std::fmt::{Debug, Formatter, Error};

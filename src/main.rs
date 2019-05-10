@@ -13,18 +13,15 @@ mod home;
 mod devices;
 mod sensors;
 
+use io::IO;
+use home::Home;
+use web::AppState;
+
 //use io::serial::SerialChannel;
 //use controller::{SerialDimmer, WebDimmer, Switch, DeviceHandler, WebLed, ActionType, WebBeam};
 //use io::web::WebChannel;
 //use controller::Device;
-use std::time::Duration;
-use std::sync::Arc;
-use std::sync::{
-    Mutex, RwLock,
-};
 //use controller::DeviceBox;
-use web::AppState;
-use std::thread;
 
 fn main() {
     dotenv::dotenv().ok();
@@ -147,10 +144,6 @@ fn main() {
 //        Switch::lambda("ir_sensor_living_room_1", move |t| ir_living_room_1.on_living_room(t))
 //    ]
 //}
-
-use chrono::prelude::*;
-use io::IO;
-use home::Home;
 
 //#[derive(Debug)]
 //struct IRState {

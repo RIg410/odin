@@ -2,7 +2,9 @@ use io::IO;
 use sensors::ActionType;
 use std::sync::atomic::{AtomicBool, Ordering};
 use io::Cmd;
-use std::sync::Mutex;
+use std::sync::{Mutex, Arc};
+use std::collections::HashMap;
+use std::fmt::Debug;
 
 pub trait Flush {
     fn flush(&self);
@@ -13,22 +15,39 @@ pub trait Switch {
     fn switch(&self, action_type: ActionType) -> bool;
 }
 
-#[derive(Debug)]
+pub trait Update: Send + Sync + Debug {
+    fn id(&self) -> &str;
+    fn update(&self, state: HashMap<String, String>) -> Result<(), String>;
+}
+
+#[derive(Debug, Clone)]
 pub struct SerialSwitch {
-    id: String,
+    id: Arc<String>,
     p_id: u8,
     io: IO,
-    is_on: AtomicBool,
+    is_on: Arc<AtomicBool>,
 }
 
 impl SerialSwitch {
-    pub fn new(io: &IO, id: &str, p_id: u8) -> SerialSwitch {
-        SerialSwitch {
-            id: id.to_owned(),
+    pub fn new(io: &mut IO, id: &str, p_id: u8) -> SerialSwitch {
+        let dev = SerialSwitch {
+            id: Arc::new(id.to_owned()),
             io: io.clone(),
             p_id,
-            is_on: AtomicBool::new(false),
-        }
+            is_on: Arc::new(AtomicBool::new(false)),
+        };
+        io.reg_device(Box::new(dev.clone()));
+        dev
+    }
+}
+
+impl Update for SerialSwitch {
+    fn id(&self) -> &str {
+        self.id.as_str()
+    }
+
+    fn update(&self, state: HashMap<String, String>) -> Result<(), String> {
+        unimplemented!()
     }
 }
 
@@ -43,26 +62,39 @@ impl Flush for SerialSwitch {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SerialDimmer {
-    id: String,
+    id: Arc<String>,
     p_id: u8,
     io: IO,
     min_value: u8,
     max_value: u8,
-    state: Mutex<DimmerState>,
+    state: Arc<Mutex<DimmerState>>,
 }
 
 impl SerialDimmer {
-    pub fn new(io: &IO, id: &str, p_id: u8, min_value: u8, max_value: u8) -> SerialDimmer {
-        SerialDimmer {
-            id: id.to_owned(),
+    pub fn new(io: &mut IO, id: &str, p_id: u8, min_value: u8, max_value: u8) -> SerialDimmer {
+        let dev = SerialDimmer {
+            id: Arc::new(id.to_owned()),
             io: io.clone(),
             p_id,
             min_value,
             max_value,
-            state: Mutex::new(DimmerState { is_on: false, brightness: 100 }),
-        }
+            state: Arc::new(Mutex::new(DimmerState { is_on: false, brightness: 100 })),
+        };
+        io.reg_device(Box::new(dev.clone()));
+
+        dev
+    }
+}
+
+impl Update for SerialDimmer {
+    fn id(&self) -> &str {
+        self.id.as_str()
+    }
+
+    fn update(&self, state: HashMap<String, String>) -> Result<(), String> {
+        unimplemented!()
     }
 }
 
@@ -92,38 +124,63 @@ impl Flush for SerialDimmer {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WebSwitch {
-    id: String,
+    id: Arc<String>,
     io: IO,
-    is_on: AtomicBool,
+    is_on: Arc<AtomicBool>,
 }
 
 impl WebSwitch {
-    pub fn new(io: &IO, id: &str) -> WebSwitch {
-        WebSwitch {
+    pub fn new(io: &mut IO, id: &str) -> WebSwitch {
+        let dev = WebSwitch {
             io: io.clone(),
-            id: id.to_owned(),
-            is_on: AtomicBool::new(false),
-        }
+            id: Arc::new(id.to_owned()),
+            is_on: Arc::new(AtomicBool::new(false)),
+        };
+        io.reg_device(Box::new(dev.clone()));
+
+        dev
     }
 }
 
-#[derive(Debug)]
-pub struct WebBeam {
-    id: String,
-    io: IO,
+impl Update for WebSwitch {
+    fn id(&self) -> &str {
+        self.id.as_str()
+    }
 
-    is_on: AtomicBool,
+    fn update(&self, state: HashMap<String, String>) -> Result<(), String> {
+        unimplemented!()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct WebBeam {
+    id: Arc<String>,
+    io: IO,
+    is_on: Arc<AtomicBool>,
 }
 
 impl WebBeam {
-    pub fn new(io: &IO, id: &str) -> WebBeam {
-        WebBeam {
+    pub fn new(io: &mut IO, id: &str) -> WebBeam {
+        let dev = WebBeam {
             io: io.clone(),
-            id: id.to_owned(),
-            is_on: AtomicBool::new(false),
-        }
+            id: Arc::new(id.to_owned()),
+            is_on: Arc::new(AtomicBool::new(false)),
+        };
+        io.reg_device(Box::new(dev.clone()));
+
+        dev
+    }
+}
+
+impl Update for WebBeam {
+    fn id(&self) -> &str {
+        self.id.as_str()
+    }
+
+    fn update(&self, state: HashMap<String, String>) -> Result<(), String> {
+        unimplemented!()
     }
 }
 

@@ -5,19 +5,6 @@ mod switch;
 //    lighting::{SerialDimmer, WebDimmer, WebLed, WebBeam},
 //    switch::{Switch},
 //};
-use std::{
-    time::Duration,
-    sync::PoisonError,
-    collections::HashMap,
-    fmt::Debug,
-    sync::{Arc, RwLock},
-    str::FromStr,
-    ops::{Add, AddAssign},
-};
-use std::fmt::Formatter;
-use std::fmt::Error;
-use timer;
-use std::sync::Mutex;
 
 //pub trait Device: Send + Sync + Debug {
 //    fn id(&self) -> &str;
