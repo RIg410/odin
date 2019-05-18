@@ -1,5 +1,7 @@
-use io::IO;
-use sensors::ActionType;
+mod beam;
+
+pub use self::beam::WebBeam;
+use io::{IO, IOBuilder, Output};
 use std::sync::atomic::{AtomicBool, Ordering};
 use io::Cmd;
 use std::sync::{Mutex, Arc};
@@ -12,7 +14,7 @@ pub trait Flush {
 
 pub trait Switch {
     fn is_on(&self) -> bool;
-    fn switch(&self, action_type: ActionType) -> bool;
+    fn switch(&self, is_on: bool);
 }
 
 pub trait Update: Send + Sync + Debug {
@@ -29,10 +31,10 @@ pub struct SerialSwitch {
 }
 
 impl SerialSwitch {
-    pub fn new(io: &mut IO, id: &str, p_id: u8) -> SerialSwitch {
+    pub fn new(io: &mut IOBuilder, id: &str, p_id: u8) -> SerialSwitch {
         let dev = SerialSwitch {
             id: Arc::new(id.to_owned()),
-            io: io.clone(),
+            io: io.shared(),
             p_id,
             is_on: Arc::new(AtomicBool::new(false)),
         };
@@ -73,10 +75,10 @@ pub struct SerialDimmer {
 }
 
 impl SerialDimmer {
-    pub fn new(io: &mut IO, id: &str, p_id: u8, min_value: u8, max_value: u8) -> SerialDimmer {
+    pub fn new(io: &mut IOBuilder, id: &str, p_id: u8, min_value: u8, max_value: u8) -> SerialDimmer {
         let dev = SerialDimmer {
             id: Arc::new(id.to_owned()),
-            io: io.clone(),
+            io: io.shared(),
             p_id,
             min_value,
             max_value,
@@ -132,9 +134,9 @@ pub struct WebSwitch {
 }
 
 impl WebSwitch {
-    pub fn new(io: &mut IO, id: &str) -> WebSwitch {
+    pub fn new(io: &mut IOBuilder, id: &str) -> WebSwitch {
         let dev = WebSwitch {
-            io: io.clone(),
+            io: io.shared(),
             id: Arc::new(id.to_owned()),
             is_on: Arc::new(AtomicBool::new(false)),
         };
@@ -154,35 +156,6 @@ impl Update for WebSwitch {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct WebBeam {
-    id: Arc<String>,
-    io: IO,
-    is_on: Arc<AtomicBool>,
-}
-
-impl WebBeam {
-    pub fn new(io: &mut IO, id: &str) -> WebBeam {
-        let dev = WebBeam {
-            io: io.clone(),
-            id: Arc::new(id.to_owned()),
-            is_on: Arc::new(AtomicBool::new(false)),
-        };
-        io.reg_device(Box::new(dev.clone()));
-
-        dev
-    }
-}
-
-impl Update for WebBeam {
-    fn id(&self) -> &str {
-        self.id.as_str()
-    }
-
-    fn update(&self, state: HashMap<String, String>) -> Result<(), String> {
-        unimplemented!()
-    }
-}
 
 #[inline]
 fn map(x: u32, in_min: u32, in_max: u32, out_min: u32, out_max: u32) -> u32 {

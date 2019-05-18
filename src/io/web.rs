@@ -2,10 +2,11 @@ use std::{
     sync::Arc,
     sync::RwLock,
     collections::HashMap,
-    time::Duration
+    time::Duration,
 };
 use actix_web::{actix, client};
 use futures::future::Future;
+use std::fmt::Write;
 
 #[derive(Debug)]
 pub struct WebChannel {
@@ -36,13 +37,19 @@ impl WebChannel {
         }
     }
 
-    pub fn send(&self, id: &str, arg: &str, arg2: &str) {
+    pub fn send(&self, id: &str, args: Vec<String>) {
         if let Some(host) = self.host(id) {
-            let url = format!("http://{}/{}?arg_1={}&arg_2={}", &host, id, arg, arg2);
+            let mut url = String::new();
+            write!(url, "http://{}/{}?", &host, id).unwrap();
+            for (i, arg) in args.iter().enumerate() {
+                write!(url, "arg_{}={}&", i, arg).unwrap();
+            }
+            url.pop();
+
             println!("req => {:?}", url);
             actix::spawn(
                 client::get(url)
-                    .timeout(Duration::new(1, 0))
+                    .timeout(Duration::new(2, 0))
                     .finish().unwrap()
                     .send()
                     .map_err(|_| ())

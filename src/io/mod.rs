@@ -3,7 +3,7 @@ use std::fmt::{Debug, Formatter, Error};
 use io::web::WebChannel;
 use std::collections::HashMap;
 use std::sync::Arc;
-use sensors::{Switch, OnSwitch};
+use sensors::{Switch, ActionType};
 use home::Home;
 
 mod serial;
@@ -12,38 +12,70 @@ mod web;
 pub use io::serial::Cmd;
 use devices::Update;
 
+pub trait Input {
+    fn update_device(&self, name: &str, value: HashMap<String, String>) -> Result<(), String>;
+    fn act(&self, home: &Home, sensor_name: &str, action_type: ActionType) -> Result<(), String>;
+    fn reg_web_devices(&self, ids: Vec<String>, host: String);
+}
+
+pub trait Output {
+    fn serial_write(&self, cmd: Cmd);
+    fn send(&self, id: &str, args: Vec<String>);
+}
+
 #[derive(Clone)]
 pub struct IO {
     serial: SerialChannel,
     web: WebChannel,
-    pub sensors: SensorsHolder,
-    pub devices: DevicesHolder,
+    sensors: Option<Arc<SensorsHolder>>,
+    devices: Option<Arc<DevicesHolder>>,
 }
 
 impl IO {
-    pub fn create() -> IO {
-        IO {
+    pub fn create_mut() -> IOBuilder {
+        let io = IO {
             serial: SerialChannel::new(),
             web: WebChannel::new(),
-            sensors: SensorsHolder::new(),
-            devices: DevicesHolder::new(),
+            sensors: None,
+            devices: None,
+        };
+        IOBuilder {
+            io,
+            sensors: HashMap::new(),
+            devices: HashMap::new(),
         }
     }
+}
 
-    pub fn serial_write(&self, cmd: Cmd) {
+impl Output for IO {
+    fn serial_write(&self, cmd: Cmd) {
         self.serial.send(cmd);
     }
 
-    pub fn reg_sensor(&mut self, switch: Switch) -> Switch {
-        self.sensors.add_sensor(switch.clone());
-        switch
+    fn send(&self, id: &str, args: Vec<String>) {
+        self.web.send(id, args)
+    }
+}
+
+impl Input for IO {
+    fn update_device(&self, name: &str, value: HashMap<String, String>) -> Result<(), String> {
+        if let Some(devices) = &self.devices {
+            devices.update_device(name, value)
+        } else {
+            Err("IO is not initialized".to_owned())
+        }
     }
 
-    pub fn reg_device(&mut self, device: Box<Update>) {
-        self.devices.add_device(device);
+
+    fn act(&self, home: &Home, sensor_name: &str, action_type: ActionType) -> Result<(), String> {
+        if let Some(sensors) = &self.sensors {
+            sensors.act(home, sensor_name, action_type)
+        } else {
+            Err("IO is not initialized".to_owned())
+        }
     }
 
-    pub fn reg_web_devices(&self, ids: Vec<String>, host: String) {
+    fn reg_web_devices(&self, ids: Vec<String>, host: String) {
         self.web.reg_device(ids, host);
     }
 }
@@ -54,76 +86,59 @@ impl Debug for IO {
     }
 }
 
+pub struct IOBuilder {
+    io: IO,
+    sensors: HashMap<String, Switch>,
+    devices: HashMap<String, Box<Update>>,
+}
+
+impl IOBuilder {
+    pub fn shared(&self) -> IO {
+        self.io.clone()
+    }
+
+    pub fn build(self) -> IO {
+        let IOBuilder { io, sensors, devices } = self;
+        let mut io = io;
+        io.devices = Some(Arc::new(DevicesHolder { devices }));
+        io.sensors = Some(Arc::new(SensorsHolder { sensors }));
+
+        io
+    }
+
+    pub fn add_sensor(&mut self, switch: Switch) {
+        self.sensors.insert(switch.id.as_str().to_owned(), switch);
+    }
+
+    pub fn reg_device(&mut self, device: Box<Update>) {
+        self.devices.insert(device.id().to_owned(), device);
+    }
+}
+
 #[derive(Clone)]
 pub struct SensorsHolder {
-    switch_map: Arc<HashMap<String, Switch>>
+    sensors: HashMap<String, Switch>
 }
 
 impl SensorsHolder {
-    pub fn new() -> SensorsHolder {
-        SensorsHolder {
-            switch_map: Arc::new(HashMap::new())
-        }
-    }
-
-    fn add_sensor(&mut self, switch: Switch) {
-        if let Some(switch_map) = Arc::get_mut(&mut self.switch_map) {
-            switch_map.insert(switch.id.as_str().to_owned(), switch);
+    fn act(&self, home: &Home, sensor_name: &str, action_type: ActionType) -> Result<(), String> {
+        if let Some(switch) = self.sensors.get(sensor_name) {
+            switch.act(home, action_type)
         } else {
-            panic!("Failed to add sensor :{:?}", switch);
-        }
-    }
-
-    //TODO return result
-    pub fn on(&self, home: &Home, name: &str) {
-        if let Some(switch) = self.switch_map.get(name) {
-            switch.on(home);
-        } else {
-            println!("Sensor with name '{}' not found.", name);
-        }
-    }
-
-    //TODO return result
-    pub fn off(&self, home: &Home, name: &str) {
-        if let Some(switch) = self.switch_map.get(name) {
-            switch.off(home);
-        } else {
-            println!("Sensor with name '{}' not found.", name);
-        }
-    }
-    //TODO return result
-    pub fn toggle(&self, home: &Home, name: &str) {
-        if let Some(switch) = self.switch_map.get(name) {
-            switch.off(home);
-        } else {
-            println!("Sensor with name '{}' not found.", name);
+            Err(format!("Sensor with name '{}' not found.", sensor_name))
         }
     }
 }
 
-#[derive(Clone)]
 pub struct DevicesHolder {
-    devices_map: Arc<HashMap<String, Box<Update>>>
+    devices: HashMap<String, Box<Update>>
 }
 
 impl DevicesHolder {
-    pub fn new() -> DevicesHolder {
-        DevicesHolder {
-            devices_map: Arc::new(HashMap::new())
-        }
-    }
-
-    fn add_device(&mut self, device: Box<Update>) {
-        if let Some(devices_map) = Arc::get_mut(&mut self.devices_map) {
-            devices_map.insert(device.id().to_owned(), device);
-        } else {
-            panic!("Failed to add device :{:?}", device);
-        }
-    }
-
     pub fn update_device(&self, name: &str, value: HashMap<String, String>) -> Result<(), String> {
-        self.devices_map.get(name)
+        self.devices.get(name)
             .ok_or(format!("device {} not found", name))
             .and_then(|dev| dev.update(value))
     }
 }
+

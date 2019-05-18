@@ -1,6 +1,6 @@
 use home::Home;
 use std::sync::Arc;
-use io::IO;
+use io::{IO, Input};
 use std::collections::HashMap;
 
 mod web;
@@ -20,7 +20,7 @@ impl AppState {
     }
 
     pub fn update_device(&self, name: &str, state: HashMap<String, String>) -> Result<(), String> {
-        self.io.devices.update_device(name, state)
+        self.io.update_device(name, state)
     }
 }
 

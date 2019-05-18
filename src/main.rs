@@ -25,10 +25,11 @@ use web::AppState;
 
 fn main() {
     dotenv::dotenv().ok();
-    let mut transport = IO::create();
-    let home = Home::new(&mut transport);
+    let mut io = IO::create_mut();
+    let home = Home::new(&mut io);
     println!("home: {:?}", home);
-    web::start_io(AppState::new(home, transport));
+    let io = io.build();
+    web::start_io(AppState::new(home, io));
 }
 
 //fn init_devices(web_controller: &WebChannel) -> DeviceHandler {
