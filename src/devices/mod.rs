@@ -4,7 +4,7 @@ pub use self::beam::WebBeam;
 use io::{IO, IOBuilder, Output};
 use std::sync::atomic::{AtomicBool, Ordering};
 use io::Cmd;
-use std::sync::{Mutex, Arc};
+use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 use std::fmt::Debug;
 
@@ -43,6 +43,17 @@ impl SerialSwitch {
     }
 }
 
+impl Switch for SerialSwitch {
+    fn is_on(&self) -> bool {
+        self.is_on.load(Ordering::SeqCst)
+    }
+
+    fn switch(&self, is_on: bool) {
+        self.is_on.store(is_on, Ordering::SeqCst);
+        self.flush()
+    }
+}
+
 impl Update for SerialSwitch {
     fn id(&self) -> &str {
         self.id.as_str()
@@ -71,7 +82,7 @@ pub struct SerialDimmer {
     io: IO,
     min_value: u8,
     max_value: u8,
-    state: Arc<Mutex<DimmerState>>,
+    state: Arc<RwLock<DimmerState>>,
 }
 
 impl SerialDimmer {
@@ -82,11 +93,29 @@ impl SerialDimmer {
             p_id,
             min_value,
             max_value,
-            state: Arc::new(Mutex::new(DimmerState { is_on: false, brightness: 100 })),
+            state: Arc::new(RwLock::new(DimmerState { is_on: false, brightness: 100 })),
         };
         io.reg_device(Box::new(dev.clone()));
 
         dev
+    }
+
+    pub fn set_power(&self, power: u8) {
+        self.state.write().unwrap().brightness = power;
+    }
+}
+
+impl Switch for SerialDimmer {
+    fn is_on(&self) -> bool {
+        self.state.read().unwrap().is_on
+    }
+
+    fn switch(&self, is_on: bool) {
+        {
+            self.state.write().unwrap().is_on = is_on;
+        }
+
+        self.flush()
     }
 }
 
@@ -108,7 +137,7 @@ struct DimmerState {
 
 impl Flush for SerialDimmer {
     fn flush(&self) {
-        let state = self.state.lock().unwrap();
+        let state = self.state.read().unwrap();
 
         let arg = if state.is_on {
             invert_and_map(
