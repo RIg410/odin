@@ -10,7 +10,6 @@ extern crate serde_json;
 extern crate serde_derive;
 extern crate serde;
 
-mod controller;
 mod io;
 mod timer;
 mod web;
