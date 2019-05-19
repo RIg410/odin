@@ -10,10 +10,11 @@ mod serial;
 mod web;
 
 pub use io::serial::Cmd;
-use devices::Update;
+use devices::Control;
+use serde_json::Value;
 
 pub trait Input {
-    fn update_device(&self, name: &str, value: HashMap<String, String>) -> Result<(), String>;
+    fn update_device(&self, name: &str, value: Value) -> Result<(), String>;
     fn act(&self, home: &Home, sensor_name: &str, action_type: ActionType) -> Result<(), String>;
     fn reg_web_devices(&self, ids: Vec<String>, host: String);
 }
@@ -58,7 +59,7 @@ impl Output for IO {
 }
 
 impl Input for IO {
-    fn update_device(&self, name: &str, value: HashMap<String, String>) -> Result<(), String> {
+    fn update_device(&self, name: &str, value: Value) -> Result<(), String> {
         if let Some(devices) = &self.devices {
             devices.update_device(name, value)
         } else {
@@ -89,7 +90,7 @@ impl Debug for IO {
 pub struct IOBuilder {
     io: IO,
     sensors: HashMap<String, Switch>,
-    devices: HashMap<String, Box<Update>>,
+    devices: HashMap<String, Box<Control>>,
 }
 
 impl IOBuilder {
@@ -110,7 +111,7 @@ impl IOBuilder {
         self.sensors.insert(switch.id.as_str().to_owned(), switch);
     }
 
-    pub fn reg_device(&mut self, device: Box<Update>) {
+    pub fn reg_device(&mut self, device: Box<Control>) {
         self.devices.insert(device.id().to_owned(), device);
     }
 }
@@ -131,11 +132,11 @@ impl SensorsHolder {
 }
 
 pub struct DevicesHolder {
-    devices: HashMap<String, Box<Update>>
+    devices: HashMap<String, Box<Control>>
 }
 
 impl DevicesHolder {
-    pub fn update_device(&self, name: &str, value: HashMap<String, String>) -> Result<(), String> {
+    pub fn update_device(&self, name: &str, value: Value) -> Result<(), String> {
         self.devices.get(name)
             .ok_or(format!("device {} not found", name))
             .and_then(|dev| dev.update(value))

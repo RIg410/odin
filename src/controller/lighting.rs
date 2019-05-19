@@ -8,13 +8,13 @@
 //#[derive(Debug, Eq, PartialEq)]
 //struct SpotState {
 //    is_on: bool,
-//    brightness: u8,
+//    BRIGHTNESS: u8,
 //    old_brightness: u8,
 //}
 //
 //impl SpotState {
 //    fn new() -> SpotState {
-//        SpotState { is_on: false, brightness: 100, old_brightness: 0 }
+//        SpotState { is_on: false, BRIGHTNESS: 100, old_brightness: 0 }
 //    }
 //}
 //
@@ -79,20 +79,20 @@
 //                };
 //
 //                self.channel.send(Cmd::new(0x01, self.p_id, arg));
-//                if state.old_brightness == state.brightness {
+//                if state.old_brightness == state.BRIGHTNESS {
 //                    return;
 //                }
 //                thread::sleep_ms(50);
 //
-//                if state.old_brightness < state.brightness {
-//                    if state.brightness - state.old_brightness <= 2 {
-//                        state.old_brightness = state.brightness;
+//                if state.old_brightness < state.BRIGHTNESS {
+//                    if state.BRIGHTNESS - state.old_brightness <= 2 {
+//                        state.old_brightness = state.BRIGHTNESS;
 //                    } else {
 //                        state.old_brightness += 2;
 //                    }
 //                } else {
-//                    if state.old_brightness - state.brightness <= 2 {
-//                        state.old_brightness = state.brightness;
+//                    if state.old_brightness - state.BRIGHTNESS <= 2 {
+//                        state.old_brightness = state.BRIGHTNESS;
 //                    } else {
 //                        state.old_brightness -= 2;
 //                    }
@@ -121,7 +121,7 @@
 //
 //    fn power(&self) -> u8 {
 //        let state = self.state.read().unwrap();
-//        state.brightness
+//        state.BRIGHTNESS
 //    }
 //
 //    fn switch(&self, action_type: &ActionType) {
@@ -135,8 +135,8 @@
 //    fn set_power(&self, dim: u8) {
 //        {
 //            let mut state = self.state.write().unwrap();
-//            state.old_brightness = state.brightness;
-//            state.brightness = dim;
+//            state.old_brightness = state.BRIGHTNESS;
+//            state.BRIGHTNESS = dim;
 //        }
 //        self.flush()
 //    }
@@ -144,8 +144,8 @@
 //    fn set_state(&self, action_type: &ActionType, power: u8) {
 //        {
 //            let mut state = self.state.write().unwrap();
-//            state.old_brightness = state.brightness;
-//            state.brightness = power;
+//            state.old_brightness = state.BRIGHTNESS;
+//            state.BRIGHTNESS = power;
 //            state.is_on = action_type == &ActionType::On;
 //        }
 //        self.flush()
@@ -176,7 +176,7 @@
 //    pub fn flush(&self) {
 //        let state = self.state.read().unwrap();
 //        let switch = if state.is_on { "ON" } else { "OFF" };
-//        let arg = format!("{}:{}", switch, state.brightness);
+//        let arg = format!("{}:{}", switch, state.BRIGHTNESS);
 //        self.web.send(&self.id, &arg, &arg);
 //    }
 //}
@@ -192,7 +192,7 @@
 //
 //    fn power(&self) -> u8 {
 //        let state = self.state.read().unwrap();
-//        state.brightness
+//        state.BRIGHTNESS
 //    }
 //
 //    fn switch(&self, action_type: &ActionType) {
@@ -210,7 +210,7 @@
 //    fn set_state(&self, action_type: &ActionType, power: u8) {
 //        {
 //            let mut state = self.state.write().unwrap();
-//            state.brightness = power;
+//            state.BRIGHTNESS = power;
 //            state.is_on = action_type == &ActionType::On;
 //        }
 //        self.flush()

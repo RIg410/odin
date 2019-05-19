@@ -2,6 +2,7 @@ use home::Home;
 use std::sync::Arc;
 use io::{IO, Input};
 use std::collections::HashMap;
+use serde_json::Value;
 
 mod web;
 
@@ -19,7 +20,7 @@ impl AppState {
         }
     }
 
-    pub fn update_device(&self, name: &str, state: HashMap<String, String>) -> Result<(), String> {
+    pub fn update_device(&self, name: &str, state: Value) -> Result<(), String> {
         self.io.update_device(name, state)
     }
 }

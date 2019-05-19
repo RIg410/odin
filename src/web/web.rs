@@ -3,13 +3,15 @@ use actix_web::{server, App, http, Path, State, Result as WebResult, Json};
 use chrono::Local;
 use io::Input;
 use sensors::ActionType;
+use std::collections::HashMap;
+use serde_json::Value;
 
 pub fn run_web_service(state: AppState) {
     server::new(move || {
         App::with_state(state.clone())
             .prefix("/odin/api")
             .resource("switch/{switch}/{state}", |r| r.method(http::Method::GET).with(switch_hndl))
-            //.resource("update/{device}", |r| r.method(http::Method::POST).with(update_device))
+            .resource("update/{device}", |r| r.method(http::Method::POST).with(update_device))
             .resource("reg-device/{ids}/{base_url}", |r| r.method(http::Method::GET).with(reg_device))
             .resource("time", |r| r.method(http::Method::GET).with(get_time))
     })
@@ -28,11 +30,15 @@ fn switch_hndl((params, state): (Path<(String, String)>, State<AppState>)) -> We
     }
 }
 
-//fn update_device((params, state, value): (Path<(String)>, State<AppState>, Json<HashMap<String, String>>)) -> Result<String, ControlError> {
-//    println!("update device:{}, value: {:?}", &params, &value);
-//    state.update_device(&params, value.0)?;
-//    Ok("Ok".to_owned())
-//}
+fn update_device((params, state, value): (Path<(String)>, State<AppState>, Json<Value>)) -> WebResult<String> {
+    println!("update device:{}, value: {:?}", &params, &value);
+    if let Err(err) = state.update_device(&params, value.0) {
+        println!("update device err: {}", err);
+        Ok(err)
+    } else {
+        Ok("Ok".to_owned())
+    }
+}
 
 /// 0 - ids (id_1:id_2:id_3)
 /// 1 - base_url (host:port)
