@@ -90,11 +90,13 @@ impl Kitchen {
     }
 
     fn on_kitchen_switch_1(home: &Home, is_on: bool) -> Result<(), String> {
+        println!("on_kitchen_switch_1:{}", is_on);
         home.kitchen.beam.switch(is_on);
         Ok(())
     }
 
     fn on_kitchen_switch_2(home: &Home, is_on: bool) -> Result<(), String> {
+        println!("on_kitchen_switch_2:{}", is_on);
         home.kitchen.kitchen_lamp.switch(is_on);
         Ok(())
     }
@@ -136,6 +138,7 @@ pub struct Corridor {
     exit_1: Switch,
     exit_2: Switch,
     ir_sensor_front_door: Switch,
+    ir_sensor_front_1_door: Switch,
     ir_sensor_bedroom_door: Switch,
     ir_sensor_middle: Switch,
     ir_sensor_middle_1: Switch,
@@ -148,6 +151,7 @@ impl Corridor {
         let ir_holder = IrHolder::new(Corridor::ir_handler);
 
         let ir_front_door = ir_holder.clone();
+        let ir_front_door_1 = ir_holder.clone();
         let ir_bedroom_door = ir_holder.clone();
         let ir_middle = ir_holder.clone();
         let ir_middle_1 = ir_holder.clone();
@@ -160,6 +164,7 @@ impl Corridor {
             exit_1: Switch::new(io, "exit_1", Corridor::on_exit_1),
             exit_2: Switch::new(io, "exit_2", Corridor::on_exit_2),
             ir_sensor_front_door: Switch::new(io, "ir_sensor_front_door", move |home, is_on| ir_front_door.ir_sensor_front_door(home, is_on)),
+            ir_sensor_front_1_door: Switch::new(io, "ir_sensor_front_1_door", move |home, is_on| ir_front_door_1.ir_sensor_front_1_door(home, is_on)),
             ir_sensor_bedroom_door: Switch::new(io, "ir_sensor_bedroom_door", move |home, is_on| ir_bedroom_door.ir_sensor_bedroom_door(home, is_on)),
             ir_sensor_middle: Switch::new(io, "ir_sensor_middle", move |home, is_on| ir_middle.ir_sensor_middle(home, is_on)),
             ir_sensor_middle_1: Switch::new(io, "ir_sensor_middle_1", move |home, is_on| ir_middle_1.ir_sensor_middle_1(home, is_on)),
@@ -292,6 +297,11 @@ impl IrHolder {
     }
 
     pub fn ir_sensor_front_door(&self, home: &Home, is_on: bool) -> Result<(), String> {
+        self.send_msg(home, is_on, SensorName::FrontDoor);
+        Ok(())
+    }
+
+    pub fn ir_sensor_front_1_door(&self, home: &Home, is_on: bool) -> Result<(), String> {
         self.send_msg(home, is_on, SensorName::FrontDoor);
         Ok(())
     }

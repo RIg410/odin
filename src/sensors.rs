@@ -36,7 +36,7 @@ impl Switch {
                 self.is_on.store(false, Ordering::SeqCst);
             }
             ActionType::Toggle => {
-                self.is_on.store(self.is_on.load(Ordering::SeqCst), Ordering::SeqCst);
+                self.is_on.store(!self.is_on.load(Ordering::SeqCst), Ordering::SeqCst);
             }
         }
 

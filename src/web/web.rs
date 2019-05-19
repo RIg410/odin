@@ -12,6 +12,8 @@ pub fn run_web_service(state: AppState) {
             .prefix("/odin/api")
             .resource("switch/{switch}/{state}", |r| r.method(http::Method::GET).with(switch_hndl))
             .resource("update/{device}", |r| r.method(http::Method::POST).with(update_device))
+            //.resource("devices/list", |r| r.method(http::Method::POST).with(devices_list))
+            //.resource("device/{device}", |r| r.method(http::Method::GET).with(get_device))
             .resource("reg-device/{ids}/{base_url}", |r| r.method(http::Method::GET).with(reg_device))
             .resource("time", |r| r.method(http::Method::GET).with(get_time))
     })
@@ -39,6 +41,10 @@ fn update_device((params, state, value): (Path<(String)>, State<AppState>, Json<
         Ok("Ok".to_owned())
     }
 }
+
+//fn devices_list(state: State<AppState>) -> WebResult<Json<String>> {
+//
+//}
 
 /// 0 - ids (id_1:id_2:id_3)
 /// 1 - base_url (host:port)
