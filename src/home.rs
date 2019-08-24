@@ -235,7 +235,7 @@ impl Corridor {
         } else {
             let time = Local::now();
             if time.hour() >= 22 || time.hour() <= 5 {
-                1
+                2
             } else {
                 100
             }
