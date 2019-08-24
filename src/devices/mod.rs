@@ -1,13 +1,8 @@
 mod web;
 mod serial;
 
-pub use self::web::{WebBeam, WebSwitch};
+pub use self::web::{WebBeam, WebSwitch, LedState, LedMode};
 pub use self::serial::{SerialSwitch, SerialDimmer};
-use io::{IO, IOBuilder, Output};
-use std::sync::atomic::{AtomicBool, Ordering};
-use io::Cmd;
-use std::sync::{Arc, RwLock};
-use std::collections::HashMap;
 use std::fmt::Debug;
 use serde_json::Value;
 

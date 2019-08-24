@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use io::IOBuilder;
 
-pub type Action = Fn(&Home, bool) -> Result<(), String> + Sync + Send + 'static;
+pub type Action = dyn Fn(&Home, bool) -> Result<(), String> + Sync + Send + 'static;
 
 #[derive(Clone)]
 pub struct Switch {

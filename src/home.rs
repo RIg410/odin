@@ -8,6 +8,14 @@ use chrono::{Local, Timelike};
 use std::thread;
 use std::thread::JoinHandle;
 use std::sync::mpsc::{Sender, channel, Receiver};
+use std::collections::HashMap;
+use serde::export::fmt::Debug;
+use home::scripts::Script;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+pub trait Runner {
+    fn run_script(&self, name: &str) -> Result<(), String>;
+}
 
 #[derive(Debug, Clone)]
 pub struct Home {
@@ -18,6 +26,7 @@ pub struct Home {
     pub corridor: Arc<Corridor>,
     pub toilet: Arc<Toilet>,
     pub bathroom: Arc<Bathroom>,
+    pub scripts: Arc<HashMap<String, Script>>,
 }
 
 impl Home {
@@ -30,6 +39,7 @@ impl Home {
             corridor: Arc::new(Corridor::new(io)),
             toilet: Arc::new(Toilet::new(io)),
             bathroom: Arc::new(Bathroom::new(io)),
+            scripts: Arc::new(scripts::scripts_map()),
         }
     }
 }
@@ -145,6 +155,7 @@ pub struct Corridor {
     ir_sensor_middle_1: Switch,
     ir_sensor_living_room: Switch,
     ir_sensor_living_room_1: Switch,
+    ir: IrHolder,
 }
 
 impl Corridor {
@@ -171,7 +182,16 @@ impl Corridor {
             ir_sensor_middle_1: Switch::new(io, "ir_sensor_middle_1", move |home, is_on| ir_middle_1.ir_sensor_middle_1(home, is_on)),
             ir_sensor_living_room: Switch::new(io, "ir_sensor_living_room", move |home, is_on| ir_living_room.ir_sensor_living_room(home, is_on)),
             ir_sensor_living_room_1: Switch::new(io, "ir_sensor_living_room_1", move |home, is_on| ir_living_room_1.ir_sensor_living_room_1(home, is_on)),
+            ir: ir_holder,
         }
+    }
+
+    pub fn enable_ir(&self) {
+        self.ir.enable_ir();
+    }
+
+    pub fn disable_ir(&self) {
+        self.ir.disable_ir();
     }
 
     fn on_exit_1(home: &Home, is_on: bool) -> Result<(), String> {
@@ -179,7 +199,7 @@ impl Corridor {
         Ok(())
     }
 
-    fn on_exit_2(home: &Home, is_on: bool) -> Result<(), String> {
+    fn on_exit_2(home: &Home, _is_on: bool) -> Result<(), String> {
         let corridor = &home.corridor;
         corridor.exit_1.act(home, ActionType::Off);
 
@@ -239,35 +259,48 @@ fn time() -> u128 {
         .unwrap_or(0)
 }
 
+#[derive(Debug)]
 struct IrState {
     thread: JoinHandle<()>,
     tx: Sender<IrMessage>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct IrHolder {
-    state: Arc<Mutex<IrState>>
+    state: Arc<Mutex<IrState>>,
+    is_ir_enable: Arc<AtomicBool>,
 }
 
 impl IrHolder {
     pub fn new<A>(act: A) -> IrHolder
         where A: Fn(&Home, bool, SensorName) + Sync + Send + 'static {
         let (tx, rx) = channel();
+        let is_ir_enable = Arc::new(AtomicBool::new(true));
+        let is_ir_enable_clone = is_ir_enable.clone();
         IrHolder {
             state: Arc::new(Mutex::new(
                 IrState {
                     thread: thread::spawn(move || {
-                        IrHolder::ir_loop(rx, move |home, is_on, sensor_name| {
+                        IrHolder::ir_loop(rx, is_ir_enable_clone, move |home, is_on, sensor_name| {
                             act(home, is_on, sensor_name)
                         })
                     }),
                     tx,
                 }
-            ))
+            )),
+            is_ir_enable,
         }
     }
 
-    fn ir_loop<A>(rx: Receiver<IrMessage>, act: A)
+    pub fn enable_ir(&self) {
+        self.is_ir_enable.store(true, Ordering::SeqCst);
+    }
+
+    pub fn disable_ir(&self) {
+        self.is_ir_enable.store(false, Ordering::SeqCst);
+    }
+
+    fn ir_loop<A>(rx: Receiver<IrMessage>, is_ir_enable: Arc<AtomicBool>, act: A)
         where A: Fn(&Home, bool, SensorName) + Sync + Send + 'static {
         let mut off_time = time();
         let mut is_on = false;
@@ -341,7 +374,7 @@ impl IrHolder {
         }
     }
 
-    fn send_msg(&self, home: &Home, is_on: bool, sensor: SensorName) {
+    fn send_msg(&self, home: &Home, _is_on: bool, sensor: SensorName) {
         let time = Local::now();
         if time.hour() > 17 || time.hour() < 10 {
             self.state.lock().unwrap().tx
@@ -469,5 +502,77 @@ impl BadRoom {
     fn on_switch_2(home: &Home, is_on: bool) -> Result<(), String> {
         home.bad_room.chandelier.switch(is_on);
         Ok(())
+    }
+}
+
+impl Runner for Home {
+    fn run_script(&self, name: &str) -> Result<(), String> {
+        self.scripts.get(name)
+            .map(|script| script.run(self))
+            .ok_or_else(|| format!("Unknown script: {}", name))
+    }
+}
+
+mod scripts {
+    use home::Home;
+    use std::collections::HashMap;
+    use std::fmt::{Formatter, Error, Debug};
+    use devices::{LedState, LedMode};
+
+    pub struct Script {
+        inner: Box<dyn Fn(&Home) + Send + Sync + 'static>
+    }
+
+    impl Script {
+        fn new<A>(act: A) -> Script where A: Fn(&Home) + Send + Sync + 'static {
+            Script { inner: Box::new(act) }
+        }
+
+        pub fn run(&self, home: &Home) {
+            (self.inner)(home)
+        }
+    }
+
+    impl Debug for Script {
+        fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+            write!(f, "action")
+        }
+    }
+
+    pub fn scripts_map() -> HashMap<String, Script> {
+        let mut map = HashMap::new();
+        map.insert("default_color_scheme".to_owned(), Script::new(default_color_scheme));
+        map.insert("red_color_scheme".to_owned(), Script::new(red_color_scheme));
+        map.insert("low_purple_scheme".to_owned(), Script::new(low_purple_scheme));
+        map
+    }
+
+    fn all_beam(home: &Home, spot: Option<bool>, led: Option<LedState>) {
+        home.bad_room.beam.channel_1(spot, led);
+        home.bad_room.beam.channel_2(spot, led);
+
+        home.living_room.beam.channel_1(spot, led);
+        home.living_room.beam.channel_2(spot, led);
+
+        home.corridor.beam.channel_1(spot, led);
+        home.corridor.beam.channel_2(spot, led);
+
+        home.kitchen.beam.channel_1(spot, led);
+        home.kitchen.beam.channel_2(spot, led);
+    }
+
+    fn default_color_scheme(home: &Home) {
+        all_beam(home, Some(true), Some(LedState::default()));
+        home.corridor.enable_ir();
+    }
+
+    fn red_color_scheme(home: &Home) {
+        all_beam(home, Some(false), Some(LedState { is_on: true, mode: LedMode::Color((255, 0, 0)) }));
+        home.corridor.disable_ir();
+    }
+
+    fn low_purple_scheme(home: &Home) {
+        all_beam(home, Some(false), Some(LedState { is_on: true, mode: LedMode::Color((20, 1, 5)) }));
+        home.corridor.disable_ir();
     }
 }

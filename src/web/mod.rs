@@ -1,7 +1,6 @@
 use home::Home;
 use std::sync::Arc;
 use io::{IO, Input};
-use std::collections::HashMap;
 use serde_json::Value;
 
 mod web;
@@ -16,12 +15,20 @@ impl AppState {
     pub fn new(home: Home, io: IO) -> AppState {
         AppState {
             home: Arc::new(home),
-            io
+            io,
         }
     }
 
     pub fn update_device(&self, name: &str, state: Value) -> Result<(), String> {
         self.io.update_device(name, state)
+    }
+
+    pub fn devices_list(&self) -> Vec<String> {
+        self.io.devices_list()
+    }
+
+    pub fn get_device(&self, name: &str) -> Result<Value, String> {
+        self.io.get_device(name)
     }
 }
 

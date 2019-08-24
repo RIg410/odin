@@ -17,6 +17,8 @@ pub trait Input {
     fn update_device(&self, name: &str, value: Value) -> Result<(), String>;
     fn act(&self, home: &Home, sensor_name: &str, action_type: ActionType) -> Result<(), String>;
     fn reg_web_devices(&self, ids: Vec<String>, host: String);
+    fn devices_list(&self) -> Vec<String>;
+    fn get_device(&self, name: &str) -> Result<Value, String>;
 }
 
 pub trait Output {
@@ -67,7 +69,6 @@ impl Input for IO {
         }
     }
 
-
     fn act(&self, home: &Home, sensor_name: &str, action_type: ActionType) -> Result<(), String> {
         if let Some(sensors) = &self.sensors {
             sensors.act(home, sensor_name, action_type)
@@ -78,6 +79,20 @@ impl Input for IO {
 
     fn reg_web_devices(&self, ids: Vec<String>, host: String) {
         self.web.reg_device(ids, host);
+    }
+
+    fn devices_list(&self) -> Vec<String> {
+        self.devices.as_ref()
+            .map(|d| d.devices.keys().map(ToOwned::to_owned).collect())
+            .unwrap_or_default()
+    }
+
+    fn get_device(&self, name: &str) -> Result<Value, String> {
+        if let Some(devices) = &self.devices {
+            devices.get_device(name)
+        } else {
+            Err("IO is not initialized".to_owned())
+        }
     }
 }
 
@@ -90,7 +105,7 @@ impl Debug for IO {
 pub struct IOBuilder {
     io: IO,
     sensors: HashMap<String, Switch>,
-    devices: HashMap<String, Box<Control>>,
+    devices: HashMap<String, Box<dyn Control>>,
 }
 
 impl IOBuilder {
@@ -111,7 +126,7 @@ impl IOBuilder {
         self.sensors.insert(switch.id.as_str().to_owned(), switch);
     }
 
-    pub fn reg_device(&mut self, device: Box<Control>) {
+    pub fn reg_device(&mut self, device: Box<dyn Control>) {
         self.devices.insert(device.id().to_owned(), device);
     }
 }
@@ -132,7 +147,7 @@ impl SensorsHolder {
 }
 
 pub struct DevicesHolder {
-    devices: HashMap<String, Box<Control>>
+    devices: HashMap<String, Box<dyn Control>>
 }
 
 impl DevicesHolder {
@@ -140,6 +155,12 @@ impl DevicesHolder {
         self.devices.get(name)
             .ok_or(format!("device {} not found", name))
             .and_then(|dev| dev.update(value))
+    }
+
+    pub fn get_device(&self, name: &str) -> Result<Value, String> {
+        self.devices.get(name)
+            .ok_or(format!("device {} not found", name))
+            .map(|dev| dev.load())
     }
 }
 

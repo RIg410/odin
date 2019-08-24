@@ -2,8 +2,6 @@ use std::sync::{Arc, RwLock};
 use io::{IOBuilder, Cmd, IO, Output};
 use std::sync::atomic::{AtomicBool, Ordering};
 use devices::{Switch, Control, Flush, invert_and_map, map, DeviceType};
-use std::collections::HashMap;
-use serde_json;
 use serde_json::Value;
 
 #[derive(Debug, Clone)]

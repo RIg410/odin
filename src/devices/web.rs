@@ -1,6 +1,5 @@
 use std::sync::{Arc, RwLock};
 use io::{IO, IOBuilder, Output};
-use std::collections::HashMap;
 use devices::{Control, Switch, Flush, DeviceType};
 use std::sync::atomic::{AtomicBool, Ordering};
 use serde_json::Value;
@@ -25,10 +24,16 @@ impl LedMode {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct LedState {
-    is_on: bool,
-    mode: LedMode,
+    pub is_on: bool,
+    pub mode: LedMode,
+}
+
+impl Default for LedState {
+    fn default() -> Self {
+        LedState { is_on: true, mode: LedMode::Rainbow((100, 100)) }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -39,6 +44,16 @@ struct BeamState {
 }
 
 impl BeamState {
+    pub fn set_state(&mut self, spot: Option<bool>, led: Option<LedState>) {
+        if let Some(spot) = spot {
+            self.is_spot_on = spot;
+        }
+
+        if let Some(led) = led {
+            self.led_state = led;
+        }
+    }
+
     fn args(&self) -> String {
         let spot_state = if self.is_on && self.is_spot_on { "ON" } else { "OFF" };
         let led_stat = if self.is_on && self.led_state.is_on { "ON" } else { "OFF" };
@@ -58,13 +73,23 @@ impl WebBeam {
     pub fn new(io: &mut IOBuilder, id: &str) -> WebBeam {
         let dev = WebBeam {
             io: io.shared(),
-            channel_1: Arc::new(RwLock::new(BeamState { is_on: false, led_state: LedState { is_on: true, mode: LedMode::Rainbow((100, 100)) }, is_spot_on: true })),
+            channel_1: Arc::new(RwLock::new(BeamState { is_on: false, led_state: LedState::default(), is_spot_on: true })),
             id: Arc::new(id.to_owned()),
-            channel_2: Arc::new(RwLock::new(BeamState { is_on: false, led_state: LedState { is_on: true, mode: LedMode::Rainbow((100, 100)) }, is_spot_on: true })),
+            channel_2: Arc::new(RwLock::new(BeamState { is_on: false, led_state: LedState::default(), is_spot_on: true })),
         };
         io.reg_device(Box::new(dev.clone()));
 
         dev
+    }
+
+    pub fn channel_1(&self, spot: Option<bool>, led: Option<LedState>) {
+        self.channel_1.write().unwrap()
+            .set_state(spot, led);
+    }
+
+    pub fn channel_2(&self, spot: Option<bool>, led: Option<LedState>) {
+        self.channel_2.write().unwrap()
+            .set_state(spot, led);
     }
 }
 

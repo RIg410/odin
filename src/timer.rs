@@ -5,10 +5,6 @@ use std::{
     sync::{
         Arc,
         atomic::AtomicBool,
-        mpsc::{
-            Sender,
-            channel,
-        },
         atomic::Ordering,
     },
 };
