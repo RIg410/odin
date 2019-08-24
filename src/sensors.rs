@@ -31,15 +31,17 @@ impl Switch {
         match action_type {
             ActionType::On => {
                 self.is_on.store(true, Ordering::SeqCst);
+                println!("On:{}", self.is_on.load(Ordering::SeqCst));
             }
             ActionType::Off => {
                 self.is_on.store(false, Ordering::SeqCst);
+                println!("Off:{}", self.is_on.load(Ordering::SeqCst));
             }
             ActionType::Toggle => {
                 self.is_on.store(!self.is_on.load(Ordering::SeqCst), Ordering::SeqCst);
+                println!("Toggle:{}", self.is_on.load(Ordering::SeqCst));
             }
         }
-
         (self.action)(home, self.is_on.load(Ordering::SeqCst))
     }
 }

@@ -1,6 +1,6 @@
 use io::IOBuilder;
 use devices::{SerialSwitch, WebBeam, SerialDimmer, WebSwitch, Switch as SwitchTrait};
-use sensors::Switch;
+use sensors::{Switch, ActionType};
 use timer::Timer;
 use std::sync::{RwLock, Arc, Mutex};
 use std::time::{Duration, SystemTime};
@@ -65,7 +65,7 @@ impl LivingRoom {
     }
 
     fn on_switch_2(home: &Home, is_on: bool) -> Result<(), String> {
-        home.living_room.cupboard_lamp.switch(is_on);
+        home.living_room.chandelier.switch(is_on);
         Ok(())
     }
 }
@@ -90,14 +90,13 @@ impl Kitchen {
     }
 
     fn on_kitchen_switch_1(home: &Home, is_on: bool) -> Result<(), String> {
-        println!("on_kitchen_switch_1:{}", is_on);
-        home.kitchen.beam.switch(is_on);
+        home.kitchen.kitchen_lamp.set_power(100);
+        home.kitchen.kitchen_lamp.switch(is_on);
         Ok(())
     }
 
     fn on_kitchen_switch_2(home: &Home, is_on: bool) -> Result<(), String> {
-        println!("on_kitchen_switch_2:{}", is_on);
-        home.kitchen.kitchen_lamp.switch(is_on);
+        home.kitchen.beam.switch(is_on);
         Ok(())
     }
 }
@@ -126,7 +125,9 @@ impl Balcony {
     }
 
     fn on_balcony_switch_2(home: &Home, is_on: bool) -> Result<(), String> {
-        home.kitchen.kitchen_lamp.switch(is_on);
+        let lamp = &home.kitchen.kitchen_lamp;
+        lamp.set_power(1);
+        lamp.switch(is_on);
         Ok(())
     }
 }
@@ -180,29 +181,30 @@ impl Corridor {
 
     fn on_exit_2(home: &Home, is_on: bool) -> Result<(), String> {
         let corridor = &home.corridor;
-        corridor.beam.switch(false);
-        corridor.lamp.switch(false);
+        corridor.exit_1.act(home, ActionType::Off);
 
         let bad_room = &home.bad_room;
-        bad_room.beam.switch(false);
-        bad_room.chandelier.switch(false);
+        bad_room.switch_1.act(home, ActionType::Off);
+        bad_room.switch_2.act(home, ActionType::Off);
 
         let bathroom = &home.bathroom;
-        bathroom.lamp.switch(false);
+        bathroom.switch.act(home, ActionType::Off);
 
         let toilet = &home.toilet;
-        toilet.lamp.switch(false);
+        toilet.switch.act(home, ActionType::Off);
 
         let kitchen = &home.kitchen;
-        kitchen.beam.switch(false);
-        kitchen.kitchen_lamp.switch(false);
+        kitchen.switch_1.act(home, ActionType::Off);
+        kitchen.switch_2.act(home, ActionType::Off);
 
         let balcony = &home.balcony;
-        balcony.chandelier.switch(false);
+        balcony.switch_1.act(home, ActionType::Off);
+        balcony.switch_2.act(home, ActionType::Off);
 
         let living_room = &home.living_room;
-        living_room.chandelier.switch(false);
-        living_room.beam.switch(false);
+        living_room.switch_1.act(home, ActionType::Off);
+        living_room.switch_2.act(home, ActionType::Off);
+
         living_room.cupboard_lamp.switch(false);
         Ok(())
     }
@@ -431,7 +433,7 @@ impl Bathroom {
             hot_water: WebSwitch::new(io, "hot_water"),
             cold_water: WebSwitch::new(io, "cold_water"),
             return_water: WebSwitch::new(io, "return_water"),
-            switch: Switch::new(io, "toilet", Bathroom::on_switch),
+            switch: Switch::new(io, "bathroom", Bathroom::on_switch),
         }
     }
 
@@ -455,7 +457,7 @@ impl BadRoom {
             chandelier: SerialSwitch::new(io, "bedroom_lamp", 0x01),
             beam: WebBeam::new(io, "bedroom_beam"),
             switch_1: Switch::new(io, "bedroom_1", BadRoom::on_switch_1),
-            switch_2: Switch::new(io, "bedroom_1", BadRoom::on_switch_2),
+            switch_2: Switch::new(io, "bedroom_2", BadRoom::on_switch_2),
         }
     }
 

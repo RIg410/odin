@@ -40,8 +40,8 @@ struct BeamState {
 
 impl BeamState {
     fn args(&self) -> String {
-        let spot_state = if self.is_spot_on { "ON" } else { "OFF" };
-        let led_stat = if self.led_state.is_on { "ON" } else { "OFF" };
+        let spot_state = if self.is_on && self.is_spot_on { "ON" } else { "OFF" };
+        let led_stat = if self.is_on && self.led_state.is_on { "ON" } else { "OFF" };
         format!("{}:{}:{}", spot_state, led_stat, self.led_state.mode.arg())
     }
 }
@@ -58,9 +58,9 @@ impl WebBeam {
     pub fn new(io: &mut IOBuilder, id: &str) -> WebBeam {
         let dev = WebBeam {
             io: io.shared(),
-            channel_1: Arc::new(RwLock::new(BeamState { is_on: false, led_state: LedState { is_on: false, mode: LedMode::Rainbow((100, 100)) }, is_spot_on: false })),
+            channel_1: Arc::new(RwLock::new(BeamState { is_on: false, led_state: LedState { is_on: true, mode: LedMode::Rainbow((100, 100)) }, is_spot_on: true })),
             id: Arc::new(id.to_owned()),
-            channel_2: Arc::new(RwLock::new(BeamState { is_on: false, led_state: LedState { is_on: false, mode: LedMode::Rainbow((100, 100)) }, is_spot_on: false })),
+            channel_2: Arc::new(RwLock::new(BeamState { is_on: false, led_state: LedState { is_on: true, mode: LedMode::Rainbow((100, 100)) }, is_spot_on: true })),
         };
         io.reg_device(Box::new(dev.clone()));
 
@@ -74,12 +74,14 @@ impl Switch for WebBeam {
     }
 
     fn switch(&self, is_on: bool) {
-        let mut channel_1 = self.channel_1.write().unwrap();
-        let mut channel_2 = self.channel_1.write().unwrap();
-        channel_1.is_on = is_on;
-        channel_2.is_on = is_on;
-
-        self.io.send(&self.id, vec![channel_1.args(), channel_2.args()]);
+        let args = {
+            let mut channel_1 = self.channel_1.write().unwrap();
+            let mut channel_2 = self.channel_2.write().unwrap();
+            channel_1.is_on = is_on;
+            channel_2.is_on = is_on;
+            vec![channel_1.args(), channel_2.args()]
+        };
+        self.io.send(&self.id, args);
     }
 }
 

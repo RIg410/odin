@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-docker run  --volume /Users/dimaakusev/IdeaProjects/sage_controller:/home/cross/project ragnaroek/rust-raspberry:1.34.2 build --release
+docker run  --volume /Users/dimaakusev/IdeaProjects/sage_controller:/home/cross/project ragnaroek/rust-raspberry:1.37.0 build --release
