@@ -1,70 +1,69 @@
-use io::AppState;
-use actix_web::{server, App, http, Path, State, Result as WebResult};
-use chrono::Local;
+use std::{
+    sync::Arc,
+    sync::RwLock,
+    collections::HashMap,
+    time::Duration,
+};
+use actix_web::{actix, client};
+use futures::future::Future;
+use std::fmt::Write;
 
-pub fn run_web_service(state: AppState) {
-    server::new(move || {
-        App::with_state(state.clone())
-            .prefix("/odin/api")
-            .resource("switch/{switch}/{state}", |r| r.method(http::Method::GET).with(switch_hndl))
-            .resource("device/{device}/{state}/{power}", |r| r.method(http::Method::GET).with(device_hndl))
-            .resource("dimmer/{device}/{power}", |r| r.method(http::Method::GET).with(dimmer_hndl))
-            .resource("reg-device/{ids}/{base_url}", |r| r.method(http::Method::GET).with(reg_device))
-            .resource("device", |r| r.method(http::Method::GET).with(get_device))
-            .resource("time", |r| r.method(http::Method::GET).with(get_time))
-    })
-        .bind("0.0.0.0:1884")
-        .expect("Can not bind to port 1884")
-        .run();
+#[derive(Debug)]
+pub struct WebChannel {
+    devices: Arc<RwLock<HashMap<String, Arc<String>>>>
 }
 
-fn switch_hndl((params, state): (Path<(String, String)>, State<AppState>)) -> WebResult<String> {
-    println!("switch:{}, state:{}", &params.0, &params.1);
-    if let Ok(action_type) = params.1.parse() {
-        state.switch.switch(&params.0, action_type);
-    } else {
-        println!("Unknown state: {}", params.1);
+impl WebChannel {
+    pub fn new() -> WebChannel {
+        WebChannel {
+            devices: Arc::new(RwLock::new(HashMap::new()))
+        }
     }
 
-    Ok("Ok".to_owned())
-}
-
-fn device_hndl((params, state): (Path<(String, String, u8)>, State<AppState>)) -> WebResult<String> {
-    println!("device:{}, state:{}, pow: {}", &params.0, &params.1, &params.2);
-    if let Ok(action_type) = params.1.parse() {
-        state.devices.set_state(&params.0, action_type, params.2);
-    } else {
-        println!("Unknown state: {}", params.1);
+    pub fn reg_device(&self, ids: Vec<String>, host: String) {
+        let mut map = self.devices.write().unwrap();
+        let host = Arc::new(host);
+        ids.into_iter().for_each(|id| {
+            map.insert(id, host.clone());
+        });
     }
-    Ok("Ok".to_owned())
+
+    pub fn host(&self, id: &str) -> Option<Arc<String>> {
+        let devices = self.devices.read().unwrap();
+        if let Some(host) = devices.get(id) {
+            Some(host.clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn send(&self, id: &str, args: Vec<String>) {
+        if let Some(host) = self.host(id) {
+            let mut url = String::new();
+            write!(url, "http://{}/{}?", &host, id).unwrap();
+            for (i, arg) in args.iter().enumerate() {
+                write!(url, "arg_{}={}&", i, arg).unwrap();
+            }
+            url.pop();
+
+            println!("req => {:?}", url);
+            actix::spawn(
+                client::get(url)
+                    .timeout(Duration::new(2, 0))
+                    .finish().unwrap()
+                    .send()
+                    .map_err(|_| ())
+                    .and_then(|response| {
+                        println!("resp => {:?}", response);
+                        Ok(())
+                    })
+            );
+        }
+    }
 }
 
-fn dimmer_hndl((params, state): (Path<(String, u8)>, State<AppState>)) -> WebResult<String> {
-    println!("dimmer:{}, pow: {}", &params.0, &params.1);
-    state.devices.set_power(&params.0, params.1);
-    Ok("Ok".to_owned())
-}
-
-/// 0 - ids (id_1:id_2:id_3)
-/// 1 - base_url (host:port)
-fn reg_device((params, state): (Path<(String, String)>, State<AppState>)) -> WebResult<String> {
-    println!("reg device id:{:?}, ip: {}", &params.0, &params.1);
-    let ids = params.0.split(":")
-        .map(|s| s.to_owned())
-        .collect::<Vec<_>>();
-    let host = params.1.to_owned();
-
-    state.web_controller.reg_device(ids, host);
-    Ok("Ok".to_owned())
-}
-
-/// 0 - ids (id_1:id_2:id_3)
-/// 1 - base_url (host:port)
-fn get_device(state: State<AppState>) -> WebResult<String> {
-    Ok(format!("{:?}", state.web_controller))
-}
-
-fn get_time(state: State<AppState>) -> WebResult<String> {
-    let time = Local::now();
-    Ok(time.to_rfc2822())
+impl Clone for WebChannel {
+    fn clone(&self) -> Self {
+        WebChannel { devices: self.devices.clone() }
+    }
 }

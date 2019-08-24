@@ -1,12 +1,13 @@
-use std::time::Duration;
 use std::{
     thread,
+    time::{Instant, Duration},
     thread::JoinHandle,
-    sync::atomic::AtomicBool,
+    sync::{
+        Arc,
+        atomic::AtomicBool,
+        atomic::Ordering,
+    },
 };
-use std::time::Instant;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct Timer {
