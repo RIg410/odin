@@ -85,6 +85,22 @@ fn all_beam(home: &Home, spot: Option<bool>, led: Option<LedState>) {
 fn default_color_scheme(home: &Home, _value: Value) -> Result<(), String> {
     all_beam(home, Some(true), Some(LedState::default()));
     home.corridor.enable_ir();
+
+    if home.bad_room.beam.is_on() {
+        home.bad_room.beam.switch(true);
+    }
+
+    if home.living_room.beam.is_on() {
+        home.living_room.beam.switch(true);
+    }
+
+    if home.corridor.beam.is_on() {
+        home.corridor.beam.switch(true);
+    }
+
+    if home.kitchen.beam.is_on() {
+        home.kitchen.beam.switch(true);
+    }
     Ok(())
 }
 

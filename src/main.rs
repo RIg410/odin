@@ -22,6 +22,9 @@ use home::Home;
 use web::AppState;
 
 fn main() {
+    std::env::set_var("RUST_LOG", "my_errors=debug,actix_web=info");
+    std::env::set_var("RUST_BACKTRACE", "1");
+    env_logger::init();
     dotenv::dotenv().ok();
     let mut io = IO::create_mut();
     let home = Home::new(&mut io);
