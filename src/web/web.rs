@@ -10,25 +10,42 @@ pub fn run_web_service(state: AppState) {
     server::new(move || {
         App::with_state(state.clone())
             .prefix("/odin/api")
-            .resource("switch/{switch}/{state}", |r| r.method(http::Method::GET).with(switch_hndl))
-            .resource("update/{device}", |r| r.method(http::Method::POST).with(update_device))
-            .resource("devices/list", |r| r.method(http::Method::POST).with(devices_list))
-            .resource("device/{device}", |r| r.method(http::Method::GET).with(get_device))
+            .resource("switch/{switch}/{state}", |r| r.method(http::Method::GET).with(toggle_hndl))
             .resource("reg-device/{ids}/{base_url}", |r| r.method(http::Method::GET).with(reg_device))
-            .resource("script/{name}", |r| r.method(http::Method::GET).with(run_script))
-            .resource("time", |r| r.method(http::Method::GET).with(get_time))
+            .resource("v1/update/{device}", |r| r.method(http::Method::POST).with(update_device))
+            .resource("v1/devices/list", |r| r.method(http::Method::GET).with(devices_list))
+            .resource("v1/device/{device}", |r| r.method(http::Method::GET).with(get_device))
+            .resource("v1/switch/{switch}/{state}", |r| r.method(http::Method::GET).with(switch_hndl))
+            .resource("v1/script/{name}", |r| r.method(http::Method::POST).with(run_script))
+            .resource("v1/time", |r| r.method(http::Method::GET).with(get_time))
     })
         .bind("0.0.0.0:1884")
         .expect("Can not bind to port 1884")
         .run();
 }
 
-fn switch_hndl((params, state): (Path<(String, String)>, State<AppState>)) -> WebResult<String> {
+fn toggle_hndl((params, state): (Path<(String, String)>, State<AppState>)) -> WebResult<String> {
     if let Err(err) = state.io.act(&state.home, &params.0, ActionType::Toggle) {
         println!("toggle switch:{} err: {}", &params.0, err);
         Ok(err)
     } else {
         println!("toggle switch:{} ok", &params.0);
+        Ok("Ok".to_owned())
+    }
+}
+
+fn switch_hndl((params, state): (Path<(String, String)>, State<AppState>)) -> WebResult<String> {
+    let act_type = match params.1.as_str() {
+        "On" => ActionType::On,
+        "Off" => ActionType::Off,
+        _ => return Ok("Unknown action type".to_owned())
+    };
+
+    if let Err(err) = state.io.act(&state.home, &params.0, act_type) {
+        println!("switch:{} err: {}", &params.0, err);
+        Ok(err)
+    } else {
+        println!("switch:{} ok", &params.0);
         Ok("Ok".to_owned())
     }
 }
@@ -75,8 +92,10 @@ fn get_time(_state: State<AppState>) -> WebResult<String> {
     Ok(time.to_rfc2822())
 }
 
-fn run_script((params, state): (Path<(String)>, State<AppState>)) -> WebResult<String> {
-    println!("run script:{:?}", &params);
-    state.home.run_script(&params);
-    Ok("Ok".to_owned())
+fn run_script((params, state, value): (Path<(String)>, State<AppState>, Json<Value>)) -> WebResult<String> {
+    println!("run script:{:?}[{:?}]", &params, value.0);
+    Ok(match state.home.run_script(&params, value.0) {
+        Ok(_) => "Ok".to_string(),
+        Err(err) => err
+    })
 }

@@ -21,7 +21,6 @@ use io::IO;
 use home::Home;
 use web::AppState;
 
-
 fn main() {
     dotenv::dotenv().ok();
     let mut io = IO::create_mut();

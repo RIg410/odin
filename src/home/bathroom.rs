@@ -1,0 +1,33 @@
+use devices::{SerialSwitch, Switch as SwitchTrait, SerialDimmer, WebSwitch};
+use sensors::Switch;
+use io::IOBuilder;
+use home::Home;
+
+
+#[derive(Debug)]
+pub struct Bathroom {
+    pub lamp: SerialDimmer,
+    pub fun: SerialSwitch,
+    pub hot_water: WebSwitch,
+    pub cold_water: WebSwitch,
+    pub return_water: WebSwitch,
+    pub switch: Switch,
+}
+
+impl Bathroom {
+    pub fn new(io: &mut IOBuilder) -> Bathroom {
+        Bathroom {
+            lamp: SerialDimmer::new(io, "bedroom_lamp", 0x01, 20, 100),
+            fun: SerialSwitch::new(io, "bathroom_fun", 0x04),
+            hot_water: WebSwitch::new(io, "hot_water"),
+            cold_water: WebSwitch::new(io, "cold_water"),
+            return_water: WebSwitch::new(io, "return_water"),
+            switch: Switch::new(io, "bathroom", Bathroom::on_switch),
+        }
+    }
+
+    fn on_switch(home: &Home, is_on: bool) -> Result<(), String> {
+        home.bathroom.lamp.switch(is_on);
+        Ok(())
+    }
+}

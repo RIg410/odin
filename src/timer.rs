@@ -8,6 +8,7 @@ use std::{
         atomic::Ordering,
     },
 };
+use std::time::SystemTime;
 
 #[derive(Debug)]
 pub struct Timer {
@@ -50,4 +51,10 @@ impl Timer {
         }
         self.thread = None;
     }
+}
+
+pub fn time_ms() -> u128 {
+    SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).ok()
+        .map(|d| d.as_secs() as u128 * 1000 + d.subsec_millis() as u128)
+        .unwrap_or(0)
 }
