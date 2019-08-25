@@ -121,10 +121,10 @@ fn color_scheme(home: &Home, value: Value) -> Result<(), String> {
     if scheme.switch_to {
         switch_off_all_switch(home)?;
 
-        home.bad_room.beam.switch(true);
-        home.living_room.beam.switch(true);
-        home.corridor.beam.switch(true);
-        home.kitchen.beam.switch(true);
+        home.bad_room.switch_1.switch(true);
+        home.living_room.switch_1.switch(true);
+        home.corridor.exit_1.switch(true);
+        home.kitchen.switch_2.switch(true);
     }
 
     Ok(())
