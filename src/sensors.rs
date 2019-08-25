@@ -1,7 +1,6 @@
 use std::string::ToString;
 use home::Home;
 use std::fmt::{Debug, Formatter, Error};
-use std::sync::atomic::Ordering;
 use std::sync::{Arc, RwLock};
 use io::IOBuilder;
 use timer::time_ms;

@@ -1,6 +1,6 @@
 use web::AppState;
 use actix_web::{server, App, http, Path, State, Result as WebResult, Json};
-use chrono::Local;
+use chrono::{Local, DateTime, Utc};
 use io::Input;
 use sensors::ActionType;
 use serde_json::Value;
@@ -87,9 +87,8 @@ fn reg_device((params, state): (Path<(String, String)>, State<AppState>)) -> Web
     Ok("Ok".to_owned())
 }
 
-fn get_time(_state: State<AppState>) -> WebResult<String> {
-    let time = Local::now();
-    Ok(time.to_rfc2822())
+fn get_time(_state: State<AppState>) -> WebResult<Json<DateTime<Utc>>> {
+    Ok(Json(Utc::now()))
 }
 
 fn run_script((params, state, value): (Path<(String)>, State<AppState>, Json<Value>)) -> WebResult<String> {
