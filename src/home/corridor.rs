@@ -74,14 +74,14 @@ impl Corridor {
     }
 
     fn calc_power(_home: &Home, sensor: SensorName) -> u8 {
-        if sensor == SensorName::FrontDoor || sensor == SensorName::BedroomDoor {
-            100
+        if sensor == SensorName::FrontDoor {
+            99
         } else {
             let time = Local::now();
             if time.hour() >= 22 || time.hour() <= 5 {
-                2
+                3
             } else {
-                100
+                99
             }
         }
     }
@@ -159,11 +159,13 @@ impl IrHolder {
                 }
             } else {
                 if let Ok(msg) = rx.recv() {
-                    sensor_name = msg.sensor;
-                    is_on = true;
-                    home = Some(msg.home);
-                    off_time = time_ms() + msg.duration as u128;
-                    act(&home.as_ref().unwrap(), is_on, sensor_name.clone());
+                    if is_ir_enable.load(Ordering::SeqCst) {
+                        sensor_name = msg.sensor;
+                        is_on = true;
+                        home = Some(msg.home);
+                        off_time = time_ms() + msg.duration as u128;
+                        act(&home.as_ref().unwrap(), is_on, sensor_name.clone());
+                    }
                 }
             }
         }
@@ -205,7 +207,7 @@ impl IrHolder {
     }
 
     fn calc_duration(&self, sensor: &SensorName) -> u128 {
-        if sensor == &SensorName::FrontDoor || sensor == &SensorName::BedroomDoor {
+        if sensor == &SensorName::FrontDoor {
             Duration::from_secs(5 * 60).as_millis()
         } else {
             Duration::from_secs(2 * 60).as_millis()
@@ -222,7 +224,7 @@ impl IrHolder {
                     home: home.clone(),
                 });
         } else {
-            if sensor == SensorName::FrontDoor || sensor == SensorName::BedroomDoor {
+            if sensor == SensorName::FrontDoor {
                 self.state.lock().unwrap().tx
                     .send(IrMessage {
                         duration: self.calc_duration(&sensor),

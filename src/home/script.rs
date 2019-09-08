@@ -113,6 +113,7 @@ fn color_scheme(home: &Home, value: Value) -> Result<(), String> {
             home.corridor.enable_ir();
         } else {
             home.corridor.disable_ir();
+            home.corridor.lamp.switch(false);
         }
     }
 
@@ -120,11 +121,10 @@ fn color_scheme(home: &Home, value: Value) -> Result<(), String> {
 
     if scheme.switch_to {
         switch_off_all_switch(home)?;
-
-        home.bad_room.switch_1.switch(true);
-        home.living_room.switch_1.switch(true);
-        home.corridor.exit_1.switch(true);
-        home.kitchen.switch_2.switch(true);
+        home.bad_room.switch_1.act(&home, ActionType::On);
+        home.living_room.switch_1.act(&home, ActionType::On);
+        home.corridor.exit_1.act(&home, ActionType::On);
+        home.kitchen.switch_2.act(&home, ActionType::On);
     }
 
     Ok(())
