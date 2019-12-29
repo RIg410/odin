@@ -1,7 +1,7 @@
 use devices::{SerialSwitch, Switch as SwitchTrait};
-use sensors::Switch;
-use io::IOBuilder;
 use home::Home;
+use io::IOBuilder;
+use sensors::Switch;
 
 #[derive(Debug)]
 pub struct Balcony {

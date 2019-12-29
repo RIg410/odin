@@ -1,15 +1,15 @@
-use devices::{WebBeam, Switch as SwitchTrait, SerialDimmer};
-use sensors::Switch;
-use io::IOBuilder;
-use home::Home;
 use chrono::{Local, Timelike};
-use std::time::Duration;
-use std::thread::JoinHandle;
-use std::sync::mpsc::{Sender, channel, Receiver};
-use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread;
+use devices::{SerialDimmer, Switch as SwitchTrait, WebBeam};
 use home::script::switch_off_all_switch;
+use home::Home;
+use io::IOBuilder;
+use sensors::Switch;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::thread::JoinHandle;
+use std::time::Duration;
 use timer::time_ms;
 
 #[derive(Debug)]
@@ -45,13 +45,33 @@ impl Corridor {
             beam: WebBeam::new(io, "corridor_beam"),
             exit_1: Switch::new(io, "exit_1", Corridor::on_exit_1),
             exit_2: Switch::new(io, "exit_2", Corridor::on_exit_2),
-            ir_sensor_front_door: Switch::new(io, "ir_sensor_front_door", move |home, is_on| ir_front_door.ir_sensor_front_door(home, is_on)),
-            ir_sensor_front_1_door: Switch::new(io, "ir_sensor_front_1_door", move |home, is_on| ir_front_door_1.ir_sensor_front_1_door(home, is_on)),
-            ir_sensor_bedroom_door: Switch::new(io, "ir_sensor_bedroom_door", move |home, is_on| ir_bedroom_door.ir_sensor_bedroom_door(home, is_on)),
-            ir_sensor_middle: Switch::new(io, "ir_sensor_middle", move |home, is_on| ir_middle.ir_sensor_middle(home, is_on)),
-            ir_sensor_middle_1: Switch::new(io, "ir_sensor_middle_1", move |home, is_on| ir_middle_1.ir_sensor_middle_1(home, is_on)),
-            ir_sensor_living_room: Switch::new(io, "ir_sensor_living_room", move |home, is_on| ir_living_room.ir_sensor_living_room(home, is_on)),
-            ir_sensor_living_room_1: Switch::new(io, "ir_sensor_living_room_1", move |home, is_on| ir_living_room_1.ir_sensor_living_room_1(home, is_on)),
+            ir_sensor_front_door: Switch::new(io, "ir_sensor_front_door", move |home, is_on| {
+                ir_front_door.ir_sensor_front_door(home, is_on)
+            }),
+            ir_sensor_front_1_door: Switch::new(
+                io,
+                "ir_sensor_front_1_door",
+                move |home, is_on| ir_front_door_1.ir_sensor_front_1_door(home, is_on),
+            ),
+            ir_sensor_bedroom_door: Switch::new(
+                io,
+                "ir_sensor_bedroom_door",
+                move |home, is_on| ir_bedroom_door.ir_sensor_bedroom_door(home, is_on),
+            ),
+            ir_sensor_middle: Switch::new(io, "ir_sensor_middle", move |home, is_on| {
+                ir_middle.ir_sensor_middle(home, is_on)
+            }),
+            ir_sensor_middle_1: Switch::new(io, "ir_sensor_middle_1", move |home, is_on| {
+                ir_middle_1.ir_sensor_middle_1(home, is_on)
+            }),
+            ir_sensor_living_room: Switch::new(io, "ir_sensor_living_room", move |home, is_on| {
+                ir_living_room.ir_sensor_living_room(home, is_on)
+            }),
+            ir_sensor_living_room_1: Switch::new(
+                io,
+                "ir_sensor_living_room_1",
+                move |home, is_on| ir_living_room_1.ir_sensor_living_room_1(home, is_on),
+            ),
             ir: ir_holder,
         }
     }
@@ -75,13 +95,13 @@ impl Corridor {
 
     fn calc_power(_home: &Home, sensor: SensorName) -> u8 {
         if sensor == SensorName::FrontDoor {
-            99
+            100
         } else {
             let time = Local::now();
             if time.hour() >= 22 || time.hour() <= 5 {
                 3
             } else {
-                99
+                100
             }
         }
     }
@@ -98,34 +118,34 @@ impl Corridor {
 }
 
 #[derive(Debug)]
-struct IrState {
+struct IrHandler {
     thread: JoinHandle<()>,
     tx: Sender<IrMessage>,
 }
 
 #[derive(Clone, Debug)]
 pub struct IrHolder {
-    state: Arc<Mutex<IrState>>,
+    handler: Arc<Mutex<IrHandler>>,
     is_ir_enable: Arc<AtomicBool>,
 }
 
 impl IrHolder {
     fn new<A>(act: A) -> IrHolder
-        where A: Fn(&Home, bool, SensorName) + Sync + Send + 'static {
+    where
+        A: Fn(&Home, bool, SensorName) + Sync + Send + 'static,
+    {
         let (tx, rx) = channel();
         let is_ir_enable = Arc::new(AtomicBool::new(true));
         let is_ir_enable_clone = is_ir_enable.clone();
         IrHolder {
-            state: Arc::new(Mutex::new(
-                IrState {
-                    thread: thread::spawn(move || {
-                        IrHolder::ir_loop(rx, is_ir_enable_clone, move |home, is_on, sensor_name| {
-                            act(home, is_on, sensor_name)
-                        })
-                    }),
-                    tx,
-                }
-            )),
+            handler: Arc::new(Mutex::new(IrHandler {
+                thread: thread::spawn(move || {
+                    IrHolder::ir_loop(rx, is_ir_enable_clone, move |home, is_on, sensor_name| {
+                        act(home, is_on, sensor_name)
+                    })
+                }),
+                tx,
+            })),
             is_ir_enable,
         }
     }
@@ -139,7 +159,9 @@ impl IrHolder {
     }
 
     fn ir_loop<A>(rx: Receiver<IrMessage>, is_ir_enable: Arc<AtomicBool>, act: A)
-        where A: Fn(&Home, bool, SensorName) + Sync + Send + 'static {
+    where
+        A: Fn(&Home, bool, SensorName) + Sync + Send + 'static,
+    {
         let mut off_time = time_ms();
         let mut is_on = false;
         let mut home: Option<Home> = None;
@@ -216,21 +238,19 @@ impl IrHolder {
 
     fn send_msg(&self, home: &Home, _is_on: bool, sensor: SensorName) {
         let time = Local::now();
-        if time.hour() > 17 || time.hour() < 10 {
-            self.state.lock().unwrap().tx
-                .send(IrMessage {
+        if time.hour() > 16 || time.hour() < 10 {
+            self.handler.lock().unwrap().tx.send(IrMessage {
+                duration: self.calc_duration(&sensor),
+                sensor,
+                home: home.clone(),
+            });
+        } else {
+            if sensor == SensorName::FrontDoor {
+                self.handler.lock().unwrap().tx.send(IrMessage {
                     duration: self.calc_duration(&sensor),
                     sensor,
                     home: home.clone(),
                 });
-        } else {
-            if sensor == SensorName::FrontDoor {
-                self.state.lock().unwrap().tx
-                    .send(IrMessage {
-                        duration: self.calc_duration(&sensor),
-                        sensor,
-                        home: home.clone(),
-                    });
             }
         }
     }

@@ -1,10 +1,10 @@
-mod web;
 mod serial;
+mod web;
 
-pub use self::web::{WebBeam, WebSwitch, LedState, LedMode};
-pub use self::serial::{SerialSwitch, SerialDimmer};
-use std::fmt::Debug;
+pub use self::serial::{SerialDimmer, SerialSwitch};
+pub use self::web::{LedMode, LedState, WebBeam, WebSwitch};
 use serde_json::Value;
+use std::fmt::Debug;
 
 pub trait Flush {
     fn flush(&self);
@@ -28,7 +28,6 @@ pub enum DeviceType {
     WebBeam,
     WebSwitch,
 }
-
 
 #[inline]
 fn map(x: u32, in_min: u32, in_max: u32, out_min: u32, out_max: u32) -> u32 {

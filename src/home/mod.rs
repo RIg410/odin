@@ -1,30 +1,22 @@
 mod bad_room;
-mod script;
-mod living_room;
-mod kitchen;
 mod balcony;
-mod corridor;
-mod toilet;
 mod bathroom;
+mod corridor;
+mod kitchen;
+mod living_room;
+mod script;
+mod toilet;
 
-use std::{
-    sync::Arc,
-    collections::HashMap,
-};
 pub use home::script::Runner;
+use std::{collections::HashMap, sync::Arc};
 
+use home::script::Script;
 use home::{
-    bad_room::BadRoom,
-    living_room::LivingRoom,
-    kitchen::Kitchen,
-    balcony::Balcony,
-    corridor::Corridor,
-    toilet::Toilet,
-    bathroom::Bathroom,
+    bad_room::BadRoom, balcony::Balcony, bathroom::Bathroom, corridor::Corridor, kitchen::Kitchen,
+    living_room::LivingRoom, toilet::Toilet,
 };
 use io::IOBuilder;
 use serde_json::Value;
-use home::script::Script;
 
 #[derive(Debug, Clone)]
 pub struct Home {
@@ -55,7 +47,8 @@ impl Home {
 
 impl Runner for Home {
     fn run_script(&self, name: &str, value: Value) -> Result<(), String> {
-        self.scripts.get(name)
+        self.scripts
+            .get(name)
             .ok_or_else(|| format!("Unknown script: {}", name))
             .and_then(|script| script.run(self, value))
     }

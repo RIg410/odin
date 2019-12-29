@@ -1,11 +1,10 @@
-use devices::{SerialSwitch, Switch as SwitchTrait, SerialDimmer};
-use sensors::Switch;
-use io::IOBuilder;
+use devices::{SerialDimmer, SerialSwitch, Switch as SwitchTrait};
 use home::Home;
+use io::IOBuilder;
+use sensors::Switch;
 use std::sync::RwLock;
-use timer::{Timer, time_ms};
 use std::time::Duration;
-
+use timer::{time_ms, Timer};
 
 #[derive(Debug)]
 pub struct Toilet {
@@ -36,7 +35,10 @@ impl Toilet {
                 if time_ms() - toilet.switch.last_update() > 30 * 1000 {
                     toilet.fun.switch(true);
                     let fun = toilet.fun.clone();
-                    toilet.timer.write().unwrap()
+                    toilet
+                        .timer
+                        .write()
+                        .unwrap()
                         .after(Duration::from_secs(60 * 3), move || {
                             fun.switch(false);
                         });

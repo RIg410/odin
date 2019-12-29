@@ -1,28 +1,28 @@
-extern crate serial as uart;
 extern crate actix_web;
-extern crate futures;
-extern crate dotenv;
-extern crate tokio_core;
 extern crate chrono;
+extern crate dotenv;
+extern crate futures;
+extern crate serial as uart;
+extern crate tokio_core;
 #[macro_use]
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde;
 
+mod devices;
+mod home;
 mod io;
+mod sensors;
 mod timer;
 mod web;
-mod home;
-mod devices;
-mod sensors;
 
-use io::IO;
 use home::Home;
+use io::IO;
 use web::AppState;
 
 fn main() {
-    std::env::set_var("RUST_LOG", "my_errors=debug,actix_web=info");
+    std::env::set_var("RUST_LOG", "my_errors=warn,actix_web=warn");
     std::env::set_var("RUST_BACKTRACE", "1");
     env_logger::init();
     dotenv::dotenv().ok();

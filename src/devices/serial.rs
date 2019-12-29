@@ -1,8 +1,8 @@
-use std::sync::{Arc, RwLock};
-use io::{IOBuilder, Cmd, IO, Output};
-use std::sync::atomic::{AtomicBool, Ordering};
-use devices::{Switch, Control, Flush, invert_and_map, map, DeviceType};
+use devices::{invert_and_map, map, Control, DeviceType, Flush, Switch};
+use io::{Cmd, IOBuilder, Output, IO};
 use serde_json::Value;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Clone)]
 pub struct SerialSwitch {
@@ -84,14 +84,23 @@ pub struct SerialDimmer {
 }
 
 impl SerialDimmer {
-    pub fn new(io: &mut IOBuilder, id: &str, p_id: u8, min_value: u8, max_value: u8) -> SerialDimmer {
+    pub fn new(
+        io: &mut IOBuilder,
+        id: &str,
+        p_id: u8,
+        min_value: u8,
+        max_value: u8,
+    ) -> SerialDimmer {
         let dev = SerialDimmer {
             id: Arc::new(id.to_owned()),
             io: io.shared(),
             p_id,
             min_value,
             max_value,
-            state: Arc::new(RwLock::new(DimmerState { is_on: false, brightness: 100 })),
+            state: Arc::new(RwLock::new(DimmerState {
+                is_on: false,
+                brightness: 100,
+            })),
         };
         io.reg_device(Box::new(dev.clone()));
 
@@ -162,13 +171,13 @@ impl Flush for SerialDimmer {
         let state = self.state.read().unwrap();
 
         let arg = if state.is_on {
-            invert_and_map(
-                map(state.brightness as u32,
-                    0,
-                    100,
-                    self.min_value as u32,
-                    self.max_value as u32)
-                    as u8)
+            invert_and_map(map(
+                state.brightness as u32,
+                0,
+                100,
+                self.min_value as u32,
+                self.max_value as u32,
+            ) as u8)
         } else {
             255
         };

@@ -1,7 +1,7 @@
-use devices::{SerialSwitch, WebBeam, Switch as SwitchTrait};
-use sensors::Switch;
-use io::IOBuilder;
+use devices::{SerialSwitch, Switch as SwitchTrait, WebBeam};
 use home::Home;
+use io::IOBuilder;
+use sensors::Switch;
 
 #[derive(Debug)]
 pub struct LivingRoom {

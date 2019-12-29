@@ -1,8 +1,8 @@
-use std::string::ToString;
 use home::Home;
-use std::fmt::{Debug, Formatter, Error};
-use std::sync::{Arc, RwLock};
 use io::IOBuilder;
+use std::fmt::{Debug, Error, Formatter};
+use std::string::ToString;
+use std::sync::{Arc, RwLock};
 use timer::time_ms;
 
 pub type Action = dyn Fn(&Home, bool) -> Result<(), String> + Sync + Send + 'static;
@@ -31,11 +31,16 @@ pub struct Switch {
 
 impl Switch {
     pub fn new<A>(io: &mut IOBuilder, id: &str, act: A) -> Switch
-        where A: Fn(&Home, bool) -> Result<(), String> + Sync + Send + 'static {
+    where
+        A: Fn(&Home, bool) -> Result<(), String> + Sync + Send + 'static,
+    {
         let switch = Switch {
             id: Arc::new(id.to_string()),
             action: Arc::new(act),
-            state: Arc::new(RwLock::new(SwitchState { is_on: false, last_update: 0 })),
+            state: Arc::new(RwLock::new(SwitchState {
+                is_on: false,
+                last_update: 0,
+            })),
         };
 
         io.add_sensor(switch.clone());

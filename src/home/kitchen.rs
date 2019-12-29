@@ -1,7 +1,7 @@
-use devices::{WebBeam, Switch as SwitchTrait, SerialDimmer};
-use sensors::Switch;
-use io::IOBuilder;
+use devices::{SerialDimmer, Switch as SwitchTrait, WebBeam};
 use home::Home;
+use io::IOBuilder;
+use sensors::Switch;
 
 #[derive(Debug)]
 pub struct Kitchen {

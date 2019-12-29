@@ -1,22 +1,17 @@
-use std::{
-    sync::Arc,
-    sync::RwLock,
-    collections::HashMap,
-    time::Duration,
-};
 use actix_web::{actix, client};
 use futures::future::Future;
 use std::fmt::Write;
+use std::{collections::HashMap, sync::Arc, sync::RwLock, time::Duration};
 
 #[derive(Debug)]
 pub struct WebChannel {
-    devices: Arc<RwLock<HashMap<String, Arc<String>>>>
+    devices: Arc<RwLock<HashMap<String, Arc<String>>>>,
 }
 
 impl WebChannel {
     pub fn new() -> WebChannel {
         WebChannel {
-            devices: Arc::new(RwLock::new(HashMap::new()))
+            devices: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -50,13 +45,14 @@ impl WebChannel {
             actix::spawn(
                 client::get(url)
                     .timeout(Duration::new(2, 0))
-                    .finish().unwrap()
+                    .finish()
+                    .unwrap()
                     .send()
                     .map_err(|_| ())
                     .and_then(|response| {
                         println!("resp => {:?}", response);
                         Ok(())
-                    })
+                    }),
             );
         }
     }
@@ -64,6 +60,8 @@ impl WebChannel {
 
 impl Clone for WebChannel {
     fn clone(&self) -> Self {
-        WebChannel { devices: self.devices.clone() }
+        WebChannel {
+            devices: self.devices.clone(),
+        }
     }
 }

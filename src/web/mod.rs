@@ -1,7 +1,7 @@
 use home::Home;
-use std::sync::Arc;
-use io::{IO, Input};
+use io::{Input, IO};
 use serde_json::Value;
+use std::sync::Arc;
 
 mod web;
 

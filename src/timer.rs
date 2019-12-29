@@ -1,14 +1,10 @@
-use std::{
-    thread,
-    time::{Instant, Duration},
-    thread::JoinHandle,
-    sync::{
-        Arc,
-        atomic::AtomicBool,
-        atomic::Ordering,
-    },
-};
 use std::time::SystemTime;
+use std::{
+    sync::{atomic::AtomicBool, atomic::Ordering, Arc},
+    thread,
+    thread::JoinHandle,
+    time::{Duration, Instant},
+};
 
 #[derive(Debug)]
 pub struct Timer {
@@ -18,11 +14,16 @@ pub struct Timer {
 
 impl Timer {
     pub fn new() -> Timer {
-        Timer { thread: None, active: None }
+        Timer {
+            thread: None,
+            active: None,
+        }
     }
 
     pub fn after<A>(&mut self, time: Duration, action: A)
-        where A: Fn() + 'static + Send + Sync {
+    where
+        A: Fn() + 'static + Send + Sync,
+    {
         self.reset();
 
         let run = Arc::new(AtomicBool::new(true));
@@ -54,7 +55,9 @@ impl Timer {
 }
 
 pub fn time_ms() -> u128 {
-    SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).ok()
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .ok()
         .map(|d| d.as_secs() as u128 * 1000 + d.subsec_millis() as u128)
         .unwrap_or(0)
 }

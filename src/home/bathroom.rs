@@ -1,8 +1,7 @@
-use devices::{SerialSwitch, Switch as SwitchTrait, SerialDimmer, WebSwitch};
-use sensors::Switch;
-use io::IOBuilder;
+use devices::{SerialDimmer, SerialSwitch, Switch as SwitchTrait, WebSwitch};
 use home::Home;
-
+use io::IOBuilder;
+use sensors::Switch;
 
 #[derive(Debug)]
 pub struct Bathroom {

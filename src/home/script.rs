@@ -1,22 +1,27 @@
+use devices::LedState;
 use devices::Switch as SwitchTrait;
 use home::Home;
+use sensors::ActionType;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::fmt::{Formatter, Error, Debug};
-use devices::LedState;
-use sensors::ActionType;
+use std::fmt::{Debug, Error, Formatter};
 
 pub trait Runner {
     fn run_script(&self, name: &str, value: Value) -> Result<(), String>;
 }
 
 pub struct Script {
-    inner: Box<dyn Fn(&Home, Value) -> Result<(), String> + Send + Sync + 'static>
+    inner: Box<dyn Fn(&Home, Value) -> Result<(), String> + Send + Sync + 'static>,
 }
 
 impl Script {
-    fn new<A>(act: A) -> Script where A: Fn(&Home, Value) -> Result<(), String> + Send + Sync + 'static {
-        Script { inner: Box::new(act) }
+    fn new<A>(act: A) -> Script
+    where
+        A: Fn(&Home, Value) -> Result<(), String> + Send + Sync + 'static,
+    {
+        Script {
+            inner: Box::new(act),
+        }
     }
 
     pub fn run(&self, home: &Home, value: Value) -> Result<(), String> {
@@ -32,7 +37,10 @@ impl Debug for Script {
 
 pub fn scripts_map() -> HashMap<String, Script> {
     let mut map = HashMap::new();
-    map.insert("default_color_scheme".to_owned(), Script::new(default_color_scheme));
+    map.insert(
+        "default_color_scheme".to_owned(),
+        Script::new(default_color_scheme),
+    );
     map.insert("color_scheme".to_owned(), Script::new(color_scheme));
     map
 }
@@ -66,7 +74,6 @@ pub fn switch_off_all_switch(home: &Home) -> Result<(), String> {
     living_room.cupboard_lamp.switch(false);
     Ok(())
 }
-
 
 fn all_beam(home: &Home, spot: Option<bool>, led: Option<LedState>) {
     home.bad_room.beam.channel_1(spot, led);
@@ -105,8 +112,7 @@ fn default_color_scheme(home: &Home, _value: Value) -> Result<(), String> {
 }
 
 fn color_scheme(home: &Home, value: Value) -> Result<(), String> {
-    let scheme: ColorScheme = serde_json::from_value(value)
-        .map_err(|err| err.to_string())?;
+    let scheme: ColorScheme = serde_json::from_value(value).map_err(|err| err.to_string())?;
 
     if let Some(enable_ir) = scheme.enable_ir {
         if enable_ir {

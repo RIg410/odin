@@ -1,16 +1,16 @@
-use io::serial::SerialChannel;
-use std::fmt::{Debug, Formatter, Error};
-use io::web::WebChannel;
-use std::collections::HashMap;
-use std::sync::Arc;
-use sensors::{Switch, ActionType};
 use home::Home;
+use io::serial::SerialChannel;
+use io::web::WebChannel;
+use sensors::{ActionType, Switch};
+use std::collections::HashMap;
+use std::fmt::{Debug, Error, Formatter};
+use std::sync::Arc;
 
 mod serial;
 mod web;
 
-pub use io::serial::Cmd;
 use devices::Control;
+pub use io::serial::Cmd;
 use serde_json::Value;
 
 pub trait Input {
@@ -82,7 +82,8 @@ impl Input for IO {
     }
 
     fn devices_list(&self) -> Vec<String> {
-        self.devices.as_ref()
+        self.devices
+            .as_ref()
             .map(|d| d.devices.keys().map(ToOwned::to_owned).collect())
             .unwrap_or_default()
     }
@@ -114,7 +115,11 @@ impl IOBuilder {
     }
 
     pub fn build(self) -> IO {
-        let IOBuilder { io, sensors, devices } = self;
+        let IOBuilder {
+            io,
+            sensors,
+            devices,
+        } = self;
         let mut io = io;
         io.devices = Some(Arc::new(DevicesHolder { devices }));
         io.sensors = Some(Arc::new(SensorsHolder { sensors }));
@@ -133,7 +138,7 @@ impl IOBuilder {
 
 #[derive(Clone)]
 pub struct SensorsHolder {
-    sensors: HashMap<String, Switch>
+    sensors: HashMap<String, Switch>,
 }
 
 impl SensorsHolder {
@@ -147,20 +152,21 @@ impl SensorsHolder {
 }
 
 pub struct DevicesHolder {
-    devices: HashMap<String, Box<dyn Control>>
+    devices: HashMap<String, Box<dyn Control>>,
 }
 
 impl DevicesHolder {
     pub fn update_device(&self, name: &str, value: Value) -> Result<(), String> {
-        self.devices.get(name)
+        self.devices
+            .get(name)
             .ok_or(format!("device {} not found", name))
             .and_then(|dev| dev.update(value))
     }
 
     pub fn get_device(&self, name: &str) -> Result<Value, String> {
-        self.devices.get(name)
+        self.devices
+            .get(name)
             .ok_or(format!("device {} not found", name))
             .map(|dev| dev.load())
     }
 }
-
