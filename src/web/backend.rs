@@ -96,7 +96,7 @@ fn reg_device((params, state): (Path<(String, String)>, State<AppState>)) -> Web
     println!("reg device id:{:?}, ip: {}", &params.0, &params.1);
     let ids = params
         .0
-        .split(":")
+        .split(':')
         .map(|s| s.to_owned())
         .collect::<Vec<_>>();
     let host = params.1.to_owned();

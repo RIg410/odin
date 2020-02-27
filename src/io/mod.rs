@@ -159,14 +159,14 @@ impl DevicesHolder {
     pub fn update_device(&self, name: &str, value: Value) -> Result<(), String> {
         self.devices
             .get(name)
-            .ok_or(format!("device {} not found", name))
+            .ok_or_else(|| format!("device {} not found", name))
             .and_then(|dev| dev.update(value))
     }
 
     pub fn get_device(&self, name: &str) -> Result<Value, String> {
         self.devices
             .get(name)
-            .ok_or(format!("device {} not found", name))
+            .ok_or_else(|| format!("device {} not found", name))
             .map(|dev| dev.load())
     }
 }

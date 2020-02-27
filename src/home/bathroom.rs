@@ -15,8 +15,10 @@ pub struct Bathroom {
 
 impl Bathroom {
     pub fn new(io: &mut IOBuilder) -> Bathroom {
+        let lamp = SerialDimmer::new(io, "bedroom_lamp", 0x01, 20, 100);
+        lamp.switch(false);
         Bathroom {
-            lamp: SerialDimmer::new(io, "bedroom_lamp", 0x01, 20, 100),
+            lamp,
             fun: SerialSwitch::new(io, "bathroom_fun", 0x04),
             hot_water: WebSwitch::new(io, "hot_water"),
             cold_water: WebSwitch::new(io, "cold_water"),

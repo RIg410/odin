@@ -236,18 +236,12 @@ impl IrHolder {
 
     fn send_msg(&self, home: &Home, _is_on: bool, sensor: SensorName) {
         let time = Local::now();
-        if time.hour() > 16 || time.hour() < 10 {
+        if time.hour() > 16 || time.hour() < 10 || sensor == SensorName::FrontDoor {
             self.handler.lock().unwrap().tx.send(IrMessage {
                 duration: self.calc_duration(&sensor),
                 sensor,
                 home: home.clone(),
-            });
-        } else if sensor == SensorName::FrontDoor {
-            self.handler.lock().unwrap().tx.send(IrMessage {
-                duration: self.calc_duration(&sensor),
-                sensor,
-                home: home.clone(),
-            });
+            }).unwrap();
         }
     }
 }

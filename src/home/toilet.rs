@@ -16,8 +16,10 @@ pub struct Toilet {
 
 impl Toilet {
     pub fn new(io: &mut IOBuilder) -> Toilet {
+        let lamp = SerialDimmer::new(io, "toilet_lamp", 0x02, 25, 100);
+        lamp.switch(false);
         Toilet {
-            lamp: SerialDimmer::new(io, "toilet_lamp", 0x02, 25, 100),
+            lamp,
             fun: SerialSwitch::new(io, "toilet_fun", 0x03),
             switch: Switch::new(io, "toilet", Toilet::on_switch),
             timer: RwLock::new(Timer::new()),
