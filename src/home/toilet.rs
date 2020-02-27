@@ -31,18 +31,16 @@ impl Toilet {
             toilet.lamp.switch(true);
             toilet.timer.write().unwrap().reset();
         } else {
-            if toilet.lamp.is_on() {
-                if time_ms() - toilet.switch.last_update() > 30 * 1000 {
-                    toilet.fun.switch(true);
-                    let fun = toilet.fun.clone();
-                    toilet
-                        .timer
-                        .write()
-                        .unwrap()
-                        .after(Duration::from_secs(60 * 3), move || {
-                            fun.switch(false);
-                        });
-                }
+            if toilet.lamp.is_on() && time_ms() - toilet.switch.last_update() > 30 * 1000 {
+                toilet.fun.switch(true);
+                let fun = toilet.fun.clone();
+                toilet
+                    .timer
+                    .write()
+                    .unwrap()
+                    .after(Duration::from_secs(60 * 3), move || {
+                        fun.switch(false);
+                    });
             }
 
             toilet.lamp.switch(false);

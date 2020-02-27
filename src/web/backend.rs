@@ -1,5 +1,5 @@
 use actix_web::{http, server, App, Json, Path, Result as WebResult, State};
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Utc};
 use home::Runner;
 use io::Input;
 use sensors::ActionType;
@@ -65,7 +65,7 @@ fn switch_hndl((params, state): (Path<(String, String)>, State<AppState>)) -> We
 }
 
 fn update_device(
-    (params, state, value): (Path<(String)>, State<AppState>, Json<Value>),
+    (params, state, value): (Path<String>, State<AppState>, Json<Value>),
 ) -> WebResult<String> {
     println!("update device:{}, value: {:?}", &params, &value);
     if let Err(err) = state.update_device(&params, value.0) {
@@ -80,7 +80,7 @@ fn devices_list(state: State<AppState>) -> WebResult<Json<Vec<String>>> {
     Ok(Json(state.devices_list()))
 }
 
-fn get_device((params, state): (Path<(String)>, State<AppState>)) -> WebResult<Json<Value>> {
+fn get_device((params, state): (Path<String>, State<AppState>)) -> WebResult<Json<Value>> {
     match state.get_device(&params) {
         Ok(val) => Ok(Json(val)),
         Err(err) => {
@@ -110,7 +110,7 @@ fn get_time(_state: State<AppState>) -> WebResult<Json<DateTime<Utc>>> {
 }
 
 fn run_script(
-    (params, state, value): (Path<(String)>, State<AppState>, Json<Value>),
+    (params, state, value): (Path<String>, State<AppState>, Json<Value>),
 ) -> WebResult<String> {
     println!("run script:{:?}[{:?}]", &params, value.0);
     Ok(match state.home.run_script(&params, value.0) {

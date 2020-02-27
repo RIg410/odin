@@ -20,38 +20,38 @@ pub struct Noise {
 }
 
 impl Noise {
-    pub fn new(hue_start: u8, hue_gap: u8, noise_step: u8) -> Noise {
-        let mut noise = Self::default();
-        noise.hue_gap = hue_gap;
-        noise.noise_step = noise_step;
-        noise.hue_start = hue_start;
-        noise
-    }
-    pub fn preset_1() -> Noise {
-        Noise {
-            hue_start: 0,
-            hue_gap: 50,
-            noise_step: 50,
-            min_bright: 245,
-            max_bright: 255,
-            min_sat: 245,
-            max_sat: 255,
-            delay: 40,
-        }
-    }
-
-    pub fn preset_2() -> Noise {
-        Noise {
-            hue_start: 180,
-            hue_gap: 255,
-            noise_step: 50,
-            min_bright: 100,
-            max_bright: 255,
-            min_sat: 250,
-            max_sat: 255,
-            delay: 40,
-        }
-    }
+//    pub fn new(hue_start: u8, hue_gap: u8, noise_step: u8) -> Noise {
+//        let mut noise = Self::default();
+//        noise.hue_gap = hue_gap;
+//        noise.noise_step = noise_step;
+//        noise.hue_start = hue_start;
+//        noise
+//    }
+//    pub fn preset_1() -> Noise {
+//        Noise {
+//            hue_start: 0,
+//            hue_gap: 50,
+//            noise_step: 50,
+//            min_bright: 245,
+//            max_bright: 255,
+//            min_sat: 245,
+//            max_sat: 255,
+//            delay: 40,
+//        }
+//    }
+//
+//    pub fn preset_2() -> Noise {
+//        Noise {
+//            hue_start: 180,
+//            hue_gap: 255,
+//            noise_step: 50,
+//            min_bright: 100,
+//            max_bright: 255,
+//            min_sat: 250,
+//            max_sat: 255,
+//            delay: 40,
+//        }
+//    }
 }
 
 impl Default for Noise {

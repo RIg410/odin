@@ -55,14 +55,13 @@ impl SerialChannel {
                 if let Err(res) = lock.as_mut().unwrap().write(&[_type, id, args]) {
                     println!("failed to send {:?}", res);
                     *lock = None;
-                } else {
-                    if let Err(res) = lock.as_mut().unwrap().flush() {
+                } else if let Err(res) = lock.as_mut().unwrap().flush() {
                         println!("failed to flush {:?}", res);
                         *lock = None;
                     } else {
                         return true;
                     }
-                }
+
             } else {
                 println!("Failed to send cmd. Failed to open port.");
             }

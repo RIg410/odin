@@ -131,8 +131,8 @@ pub struct IrHolder {
 
 impl IrHolder {
     fn new<A>(act: A) -> IrHolder
-    where
-        A: Fn(&Home, bool, SensorName) + Sync + Send + 'static,
+        where
+            A: Fn(&Home, bool, SensorName) + Sync + Send + 'static,
     {
         let (tx, rx) = channel();
         let is_ir_enable = Arc::new(AtomicBool::new(true));
@@ -159,8 +159,8 @@ impl IrHolder {
     }
 
     fn ir_loop<A>(rx: Receiver<IrMessage>, is_ir_enable: Arc<AtomicBool>, act: A)
-    where
-        A: Fn(&Home, bool, SensorName) + Sync + Send + 'static,
+        where
+            A: Fn(&Home, bool, SensorName) + Sync + Send + 'static,
     {
         let mut off_time = time_ms();
         let mut is_on = false;
@@ -179,15 +179,13 @@ impl IrHolder {
                     is_on = false;
                     act(&home.as_ref().unwrap(), is_on, sensor_name.clone());
                 }
-            } else {
-                if let Ok(msg) = rx.recv() {
-                    if is_ir_enable.load(Ordering::SeqCst) {
-                        sensor_name = msg.sensor;
-                        is_on = true;
-                        home = Some(msg.home);
-                        off_time = time_ms() + msg.duration as u128;
-                        act(&home.as_ref().unwrap(), is_on, sensor_name.clone());
-                    }
+            } else if let Ok(msg) = rx.recv() {
+                if is_ir_enable.load(Ordering::SeqCst) {
+                    sensor_name = msg.sensor;
+                    is_on = true;
+                    home = Some(msg.home);
+                    off_time = time_ms() + msg.duration as u128;
+                    act(&home.as_ref().unwrap(), is_on, sensor_name.clone());
                 }
             }
         }
@@ -244,14 +242,12 @@ impl IrHolder {
                 sensor,
                 home: home.clone(),
             });
-        } else {
-            if sensor == SensorName::FrontDoor {
-                self.handler.lock().unwrap().tx.send(IrMessage {
-                    duration: self.calc_duration(&sensor),
-                    sensor,
-                    home: home.clone(),
-                });
-            }
+        } else if sensor == SensorName::FrontDoor {
+            self.handler.lock().unwrap().tx.send(IrMessage {
+                duration: self.calc_duration(&sensor),
+                sensor,
+                home: home.clone(),
+            });
         }
     }
 }

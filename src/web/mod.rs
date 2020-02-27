@@ -3,7 +3,7 @@ use io::{Input, IO};
 use serde_json::Value;
 use std::sync::Arc;
 
-mod web;
+mod backend;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -33,5 +33,5 @@ impl AppState {
 }
 
 pub fn start_io(app_state: AppState) {
-    web::run_web_service(app_state);
+    backend::run_web_service(app_state);
 }
