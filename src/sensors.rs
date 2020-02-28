@@ -4,8 +4,9 @@ use std::fmt::{Debug, Error, Formatter};
 use std::string::ToString;
 use std::sync::{Arc, RwLock};
 use timer::time_ms;
+use anyhow::Result;
 
-pub type Action = dyn Fn(&Home, bool) -> Result<(), String> + Sync + Send + 'static;
+pub type Action = dyn Fn(&Home, bool) -> Result<()> + Sync + Send + 'static;
 
 struct SwitchState {
     is_on: bool,
@@ -32,7 +33,7 @@ pub struct Switch {
 impl Switch {
     pub fn new<A>(io: &mut IOBuilder, id: &str, act: A) -> Switch
     where
-        A: Fn(&Home, bool) -> Result<(), String> + Sync + Send + 'static,
+        A: Fn(&Home, bool) -> Result<()> + Sync + Send + 'static,
     {
         let switch = Switch {
             id: Arc::new(id.to_string()),
@@ -47,7 +48,7 @@ impl Switch {
         switch
     }
 
-    pub fn act(&self, home: &Home, action_type: ActionType) -> Result<(), String> {
+    pub fn act(&self, home: &Home, action_type: ActionType) -> Result<()> {
         let is_on = {
             let mut state = self.state.write().unwrap();
             match action_type {

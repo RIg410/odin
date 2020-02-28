@@ -3,8 +3,11 @@ use io::serial::SerialChannel;
 use io::web::WebChannel;
 use sensors::{ActionType, Switch};
 use std::collections::HashMap;
-use std::fmt::{Debug, Error, Formatter};
+use std::fmt::{Debug, Error as FmtError, Formatter};
 use std::sync::Arc;
+use anyhow::{
+    Result, Error
+};
 
 mod serial;
 mod web;
@@ -14,11 +17,11 @@ pub use io::serial::Cmd;
 use serde_json::Value;
 
 pub trait Input {
-    fn update_device(&self, name: &str, value: Value) -> Result<(), String>;
-    fn act(&self, home: &Home, sensor_name: &str, action_type: ActionType) -> Result<(), String>;
+    fn update_device(&self, name: &str, value: Value) -> Result<()>;
+    fn act(&self, home: &Home, sensor_name: &str, action_type: ActionType) -> Result<()>;
     fn reg_web_devices(&self, ids: Vec<String>, host: String);
     fn devices_list(&self) -> Vec<String>;
-    fn get_device(&self, name: &str) -> Result<Value, String>;
+    fn get_device(&self, name: &str) -> Result<Value>;
 }
 
 pub trait Output {
@@ -61,19 +64,19 @@ impl Output for IO {
 }
 
 impl Input for IO {
-    fn update_device(&self, name: &str, value: Value) -> Result<(), String> {
+    fn update_device(&self, name: &str, value: Value) -> Result<()> {
         if let Some(devices) = &self.devices {
             devices.update_device(name, value)
         } else {
-            Err("IO is not initialized".to_owned())
+            Err(Error::msg("IO is not initialized"))
         }
     }
 
-    fn act(&self, home: &Home, sensor_name: &str, action_type: ActionType) -> Result<(), String> {
+    fn act(&self, home: &Home, sensor_name: &str, action_type: ActionType) -> Result<()> {
         if let Some(sensors) = &self.sensors {
             sensors.act(home, sensor_name, action_type)
         } else {
-            Err("IO is not initialized".to_owned())
+            Err(Error::msg("IO is not initialized"))
         }
     }
 
@@ -88,17 +91,17 @@ impl Input for IO {
             .unwrap_or_default()
     }
 
-    fn get_device(&self, name: &str) -> Result<Value, String> {
+    fn get_device(&self, name: &str) -> Result<Value> {
         if let Some(devices) = &self.devices {
             devices.get_device(name)
         } else {
-            Err("IO is not initialized".to_owned())
+            Err(Error::msg("IO is not initialized"))
         }
     }
 }
 
 impl Debug for IO {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
         write!(f, "Transport {{}}")
     }
 }
@@ -142,11 +145,11 @@ pub struct SensorsHolder {
 }
 
 impl SensorsHolder {
-    fn act(&self, home: &Home, sensor_name: &str, action_type: ActionType) -> Result<(), String> {
+    fn act(&self, home: &Home, sensor_name: &str, action_type: ActionType) -> Result<()> {
         if let Some(switch) = self.sensors.get(sensor_name) {
             switch.act(home, action_type)
         } else {
-            Err(format!("Sensor with name '{}' not found.", sensor_name))
+            Err(Error::msg(format!("Sensor with name '{}' not found.", sensor_name)))
         }
     }
 }
@@ -156,17 +159,17 @@ pub struct DevicesHolder {
 }
 
 impl DevicesHolder {
-    pub fn update_device(&self, name: &str, value: Value) -> Result<(), String> {
+    pub fn update_device(&self, name: &str, value: Value) -> Result<()> {
         self.devices
             .get(name)
-            .ok_or_else(|| format!("device {} not found", name))
+            .ok_or_else(|| Error::msg(format!("device {} not found", name)))
             .and_then(|dev| dev.update(value))
     }
 
-    pub fn get_device(&self, name: &str) -> Result<Value, String> {
+    pub fn get_device(&self, name: &str) -> Result<Value> {
         self.devices
             .get(name)
-            .ok_or_else(|| format!("device {} not found", name))
+            .ok_or_else(|| Error::msg(format!("device {} not found", name)))
             .map(|dev| dev.load())
     }
 }

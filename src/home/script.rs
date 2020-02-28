@@ -4,33 +4,34 @@ use home::Home;
 use sensors::ActionType;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::fmt::{Debug, Error, Formatter};
+use std::fmt::{Debug, Error as FmtError, Formatter};
+use anyhow::Result;
 
 pub trait Runner {
-    fn run_script(&self, name: &str, value: Value) -> Result<(), String>;
+    fn run_script(&self, name: &str, value: Value) -> Result<()>;
 }
 
 pub struct Script {
-    inner: Box<dyn Fn(&Home, Value) -> Result<(), String> + Send + Sync + 'static>,
+    inner: Box<dyn Fn(&Home, Value) -> Result<()> + Send + Sync + 'static>,
 }
 
 impl Script {
     fn new<A>(act: A) -> Script
     where
-        A: Fn(&Home, Value) -> Result<(), String> + Send + Sync + 'static,
+        A: Fn(&Home, Value) -> Result<()> + Send + Sync + 'static,
     {
         Script {
             inner: Box::new(act),
         }
     }
 
-    pub fn run(&self, home: &Home, value: Value) -> Result<(), String> {
+    pub fn run(&self, home: &Home, value: Value) -> Result<()> {
         (self.inner)(home, value)
     }
 }
 
 impl Debug for Script {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
         write!(f, "action")
     }
 }
@@ -45,7 +46,7 @@ pub fn scripts_map() -> HashMap<String, Script> {
     map
 }
 
-pub fn switch_off_all_switch(home: &Home) -> Result<(), String> {
+pub fn switch_off_all_switch(home: &Home) -> Result<()> {
     let corridor = &home.corridor;
     corridor.exit_1.act(home, ActionType::Off)?;
 
@@ -89,7 +90,7 @@ fn all_beam(home: &Home, spot: Option<bool>, led: Option<LedState>) {
     home.kitchen.beam.channel_2(spot, led);
 }
 
-fn default_color_scheme(home: &Home, _value: Value) -> Result<(), String> {
+fn default_color_scheme(home: &Home, _value: Value) -> Result<()> {
     all_beam(home, Some(true), Some(LedState::default()));
     home.corridor.enable_ir();
 
@@ -111,8 +112,8 @@ fn default_color_scheme(home: &Home, _value: Value) -> Result<(), String> {
     Ok(())
 }
 
-fn color_scheme(home: &Home, value: Value) -> Result<(), String> {
-    let scheme: ColorScheme = serde_json::from_value(value).map_err(|err| err.to_string())?;
+fn color_scheme(home: &Home, value: Value) -> Result<()> {
+    let scheme: ColorScheme = serde_json::from_value(value)?;
 
     if let Some(enable_ir) = scheme.enable_ir {
         if enable_ir {

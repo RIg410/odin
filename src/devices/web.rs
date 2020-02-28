@@ -3,6 +3,7 @@ use io::{IOBuilder, Output, IO};
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
+use anyhow::Result;
 
 pub type Color = (u8, u8, u8);
 pub type SpeedAndBrightness = (u8, u8);
@@ -222,9 +223,8 @@ impl Control for WebBeam {
         serde_json::to_value(&state).unwrap()
     }
 
-    fn update(&self, state: Value) -> Result<(), String> {
-        let state: WebBeamState = serde_json::from_value(state)
-            .map_err(|err| format!("Failed to parse json: {}", err))?;
+    fn update(&self, state: Value) -> Result<()> {
+        let state: WebBeamState = serde_json::from_value(state)?;
         {
             *self.channel_1.write().unwrap() = state.channel_1;
             *self.channel_2.write().unwrap() = state.channel_2;
@@ -282,7 +282,7 @@ impl Control for WebSwitch {
         })
     }
 
-    fn update(&self, state: Value) -> Result<(), String> {
+    fn update(&self, state: Value) -> Result<()> {
         if let Some(is_on) = &state["is_on"].as_bool() {
             self.switch(is_on.to_owned());
         }

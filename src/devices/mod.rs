@@ -5,6 +5,7 @@ pub use self::serial::{SerialDimmer, SerialSwitch};
 pub use self::web::{LedMode, LedState, WebBeam, WebSwitch};
 use serde_json::Value;
 use std::fmt::Debug;
+use anyhow::Result;
 
 pub trait Flush {
     fn flush(&self);
@@ -19,7 +20,7 @@ pub trait Control: Send + Sync + Debug {
     fn id(&self) -> &str;
     fn dev_type(&self) -> DeviceType;
     fn load(&self) -> Value;
-    fn update(&self, state: Value) -> Result<(), String>;
+    fn update(&self, state: Value) -> Result<()>;
 }
 
 pub enum DeviceType {

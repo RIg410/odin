@@ -9,6 +9,7 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde;
+extern crate anyhow;
 
 mod devices;
 mod home;

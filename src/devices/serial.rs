@@ -3,6 +3,7 @@ use io::{Cmd, IOBuilder, Output, IO};
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
+use anyhow::Result;
 
 #[derive(Debug, Clone)]
 pub struct SerialSwitch {
@@ -54,7 +55,7 @@ impl Control for SerialSwitch {
         })
     }
 
-    fn update(&self, state: Value) -> Result<(), String> {
+    fn update(&self, state: Value) -> Result<()> {
         if let Some(is_on) = &state["is_on"].as_bool() {
             self.switch(is_on.to_owned());
         }
@@ -147,7 +148,7 @@ impl Control for SerialDimmer {
         })
     }
 
-    fn update(&self, val: Value) -> Result<(), String> {
+    fn update(&self, val: Value) -> Result<()> {
         if let Some(brightness) = val["brightness"].as_u64() {
             let mut state = self.state.write().unwrap();
             state.brightness = brightness as u8;

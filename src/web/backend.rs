@@ -41,7 +41,7 @@ pub fn run_web_service(state: AppState) {
 fn toggle_hndl((params, state): (Path<(String, String)>, State<AppState>)) -> WebResult<String> {
     if let Err(err) = state.io.act(&state.home, &params.0, ActionType::Toggle) {
         println!("toggle switch:{} err: {}", &params.0, err);
-        Ok(err)
+        Ok(err.to_string())
     } else {
         println!("toggle switch:{} ok", &params.0);
         Ok("Ok".to_owned())
@@ -57,7 +57,7 @@ fn switch_hndl((params, state): (Path<(String, String)>, State<AppState>)) -> We
 
     if let Err(err) = state.io.act(&state.home, &params.0, act_type) {
         println!("switch:{} err: {}", &params.0, err);
-        Ok(err)
+        Ok(err.to_string())
     } else {
         println!("switch:{} ok", &params.0);
         Ok("Ok".to_owned())
@@ -70,7 +70,7 @@ fn update_device(
     println!("update device:{}, value: {:?}", &params, &value);
     if let Err(err) = state.update_device(&params, value.0) {
         println!("update device err: {}", err);
-        Ok(err)
+        Ok(err.to_string())
     } else {
         Ok("Ok".to_owned())
     }
@@ -85,7 +85,7 @@ fn get_device((params, state): (Path<String>, State<AppState>)) -> WebResult<Jso
         Ok(val) => Ok(Json(val)),
         Err(err) => {
             println!("get device err: {}", err);
-            Ok(Json(json!({ "err": err })))
+            Ok(Json(json!({ "err": err.to_string() })))
         }
     }
 }
@@ -115,6 +115,6 @@ fn run_script(
     println!("run script:{:?}[{:?}]", &params, value.0);
     Ok(match state.home.run_script(&params, value.0) {
         Ok(_) => "Ok".to_string(),
-        Err(err) => err,
+        Err(err) => err.to_string(),
     })
 }

@@ -5,6 +5,7 @@ use sensors::Switch;
 use std::sync::RwLock;
 use std::time::Duration;
 use timer::{time_ms, Timer};
+use anyhow::Result;
 
 #[derive(Debug)]
 pub struct Toilet {
@@ -26,7 +27,7 @@ impl Toilet {
         }
     }
 
-    fn on_switch(home: &Home, is_on: bool) -> Result<(), String> {
+    fn on_switch(home: &Home, is_on: bool) -> Result<()> {
         let toilet = &home.toilet;
         if is_on {
             toilet.fun.switch(false);

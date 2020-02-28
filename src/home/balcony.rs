@@ -2,6 +2,7 @@ use devices::{SerialSwitch, Switch as SwitchTrait};
 use home::Home;
 use io::IOBuilder;
 use sensors::Switch;
+use anyhow::Result;
 
 #[derive(Debug)]
 pub struct Balcony {
@@ -20,12 +21,12 @@ impl Balcony {
         }
     }
 
-    fn on_balcony_switch_1(home: &Home, is_on: bool) -> Result<(), String> {
+    fn on_balcony_switch_1(home: &Home, is_on: bool) -> Result<()> {
         home.balcony.chandelier.switch(is_on);
         Ok(())
     }
 
-    fn on_balcony_switch_2(home: &Home, is_on: bool) -> Result<(), String> {
+    fn on_balcony_switch_2(home: &Home, is_on: bool) -> Result<()> {
         let lamp = &home.kitchen.kitchen_lamp;
         lamp.set_power(1);
         lamp.switch(is_on);

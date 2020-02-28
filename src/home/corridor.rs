@@ -11,6 +11,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
 use timer::time_ms;
+use anyhow::Result;
 
 #[derive(Debug)]
 pub struct Corridor {
@@ -84,12 +85,12 @@ impl Corridor {
         self.ir.disable_ir();
     }
 
-    fn on_exit_1(home: &Home, is_on: bool) -> Result<(), String> {
+    fn on_exit_1(home: &Home, is_on: bool) -> Result<()> {
         home.corridor.beam.switch(is_on);
         Ok(())
     }
 
-    fn on_exit_2(home: &Home, _is_on: bool) -> Result<(), String> {
+    fn on_exit_2(home: &Home, _is_on: bool) -> Result<()> {
         switch_off_all_switch(home)
     }
 
@@ -191,37 +192,37 @@ impl IrHolder {
         }
     }
 
-    pub fn ir_sensor_front_door(&self, home: &Home, is_on: bool) -> Result<(), String> {
+    pub fn ir_sensor_front_door(&self, home: &Home, is_on: bool) -> Result<()> {
         self.send_msg(home, is_on, SensorName::FrontDoor);
         Ok(())
     }
 
-    pub fn ir_sensor_front_1_door(&self, home: &Home, is_on: bool) -> Result<(), String> {
+    pub fn ir_sensor_front_1_door(&self, home: &Home, is_on: bool) -> Result<()> {
         self.send_msg(home, is_on, SensorName::FrontDoor);
         Ok(())
     }
 
-    fn ir_sensor_bedroom_door(&self, home: &Home, is_on: bool) -> Result<(), String> {
+    fn ir_sensor_bedroom_door(&self, home: &Home, is_on: bool) -> Result<()> {
         self.send_msg(home, is_on, SensorName::BedroomDoor);
         Ok(())
     }
 
-    fn ir_sensor_middle(&self, home: &Home, is_on: bool) -> Result<(), String> {
+    fn ir_sensor_middle(&self, home: &Home, is_on: bool) -> Result<()> {
         self.send_msg(home, is_on, SensorName::Middle);
         Ok(())
     }
 
-    fn ir_sensor_middle_1(&self, home: &Home, is_on: bool) -> Result<(), String> {
+    fn ir_sensor_middle_1(&self, home: &Home, is_on: bool) -> Result<()> {
         self.send_msg(home, is_on, SensorName::Middle);
         Ok(())
     }
 
-    fn ir_sensor_living_room(&self, home: &Home, is_on: bool) -> Result<(), String> {
+    fn ir_sensor_living_room(&self, home: &Home, is_on: bool) -> Result<()> {
         self.send_msg(home, is_on, SensorName::LivingRoom);
         Ok(())
     }
 
-    fn ir_sensor_living_room_1(&self, home: &Home, is_on: bool) -> Result<(), String> {
+    fn ir_sensor_living_room_1(&self, home: &Home, is_on: bool) -> Result<()> {
         self.send_msg(home, is_on, SensorName::LivingRoom);
         Ok(())
     }

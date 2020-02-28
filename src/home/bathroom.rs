@@ -2,6 +2,7 @@ use devices::{SerialDimmer, SerialSwitch, Switch as SwitchTrait, WebSwitch};
 use home::Home;
 use io::IOBuilder;
 use sensors::Switch;
+use anyhow::Result;
 
 #[derive(Debug)]
 pub struct Bathroom {
@@ -27,7 +28,7 @@ impl Bathroom {
         }
     }
 
-    fn on_switch(home: &Home, is_on: bool) -> Result<(), String> {
+    fn on_switch(home: &Home, is_on: bool) -> Result<()> {
         home.bathroom.lamp.switch(is_on);
         Ok(())
     }

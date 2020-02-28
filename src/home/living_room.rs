@@ -2,6 +2,7 @@ use devices::{SerialSwitch, Switch as SwitchTrait, WebBeam};
 use home::Home;
 use io::IOBuilder;
 use sensors::Switch;
+use anyhow::Result;
 
 #[derive(Debug)]
 pub struct LivingRoom {
@@ -27,12 +28,12 @@ impl LivingRoom {
     }
 
     //beam switch
-    fn on_switch_1(home: &Home, is_on: bool) -> Result<(), String> {
+    fn on_switch_1(home: &Home, is_on: bool) -> Result<()> {
         home.living_room.beam.switch(is_on);
         Ok(())
     }
 
-    fn on_switch_2(home: &Home, is_on: bool) -> Result<(), String> {
+    fn on_switch_2(home: &Home, is_on: bool) -> Result<()> {
         home.living_room.chandelier.switch(is_on);
         Ok(())
     }

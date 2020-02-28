@@ -17,6 +17,9 @@ use home::{
 };
 use io::IOBuilder;
 use serde_json::Value;
+use anyhow::{
+    Result, Error
+};
 
 #[derive(Debug, Clone)]
 pub struct Home {
@@ -46,10 +49,10 @@ impl Home {
 }
 
 impl Runner for Home {
-    fn run_script(&self, name: &str, value: Value) -> Result<(), String> {
+    fn run_script(&self, name: &str, value: Value) -> Result<()> {
         self.scripts
             .get(name)
-            .ok_or_else(|| format!("Unknown script: {}", name))
+            .ok_or_else(|| Error::msg(format!("Unknown script: {}", name)))
             .and_then(|script| script.run(self, value))
     }
 }

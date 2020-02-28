@@ -2,7 +2,7 @@ use home::Home;
 use io::{Input, IO};
 use serde_json::Value;
 use std::sync::Arc;
-
+use anyhow::Result;
 mod backend;
 
 #[derive(Clone)]
@@ -19,7 +19,7 @@ impl AppState {
         }
     }
 
-    pub fn update_device(&self, name: &str, state: Value) -> Result<(), String> {
+    pub fn update_device(&self, name: &str, state: Value) -> Result<()> {
         self.io.update_device(name, state)
     }
 
@@ -27,7 +27,7 @@ impl AppState {
         self.io.devices_list()
     }
 
-    pub fn get_device(&self, name: &str) -> Result<Value, String> {
+    pub fn get_device(&self, name: &str) -> Result<Value> {
         self.io.get_device(name)
     }
 }
