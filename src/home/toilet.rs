@@ -32,7 +32,7 @@ impl Toilet {
     fn on_switch(home: &Home, is_on: bool) -> Result<()> {
         let toilet = &home.toilet;
         if is_on {
-            toilet.fun.switch(false)?;
+            toilet.fun.switch(true)?;
             toilet.lamp.switch(true)?;
             toilet.timer.write().unwrap().reset();
         } else {
@@ -48,6 +48,8 @@ impl Toilet {
                             error!("Failed to switch fun: {:?}", err);
                         }
                     });
+            } else {
+                toilet.fun.switch(false)?;
             }
 
             toilet.lamp.switch(false)?
