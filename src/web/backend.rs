@@ -1,99 +1,90 @@
-use actix_web::{http, server, App, Json, Path, Result as WebResult, State};
-use chrono::{DateTime, Utc};
-use home::Runner;
-use io::Input;
-use sensors::ActionType;
+use crate::home::Runner;
+use crate::io::Input;
+use crate::sensors::ActionType;
+use crate::web::AppState;
+use actix_web::web::{Data, Json, Path};
+use actix_web::{web, App, HttpResponse, HttpServer};
+use chrono::Utc;
 use serde_json::Value;
-use web::AppState;
 
-pub fn run_web_service(state: AppState) {
-    server::new(move || {
-        App::with_state(state.clone())
-            .prefix("/odin/api")
-            .resource("switch/{switch}/{state}", |r| {
-                r.method(http::Method::GET).with(toggle_hndl)
-            })
-            .resource("reg-device/{ids}/{base_url}", |r| {
-                r.method(http::Method::GET).with(reg_device)
-            })
-            .resource("v1/devices/list", |r| {
-                r.method(http::Method::GET).with(devices_list)
-            })
-            .resource("v1/device/{device}/update", |r| {
-                r.method(http::Method::POST).with(update_device)
-            })
-            .resource("v1/device/{device}/info", |r| {
-                r.method(http::Method::GET).with(get_device)
-            })
-            .resource("v1/switch/{switch}/{state}", |r| {
-                r.method(http::Method::GET).with(switch_hndl)
-            })
-            .resource("v1/script/{name}", |r| {
-                r.method(http::Method::POST).with(run_script)
-            })
-            .resource("v1/time", |r| r.method(http::Method::GET).with(get_time))
+pub async fn run_web_service(state: AppState) -> std::io::Result<()> {
+    HttpServer::new(move || {
+        App::new().data(state.clone()).service(
+            web::scope("/odin/api")
+                .route("switch/{switch}/{state}", web::get().to(toggle_hndl))
+                .route("reg-device/{ids}/{base_url}", web::get().to(reg_device))
+                .route("v1/devices/list", web::get().to(devices_list))
+                .route("v1/device/{device}/update", web::post().to(update_device))
+                .route("v1/device/{device}/info", web::get().to(get_device))
+                .route("v1/switch/{switch}/{state}", web::get().to(switch_hndl))
+                .route("v1/script/{name}", web::post().to(run_script))
+                .route("v1/time", web::get().to(get_time)),
+        )
     })
     .bind("0.0.0.0:1884")
     .expect("Can not bind to port 1884")
-    .run();
+    .run()
+    .await
 }
 
-fn toggle_hndl((params, state): (Path<(String, String)>, State<AppState>)) -> WebResult<String> {
+async fn toggle_hndl(params: Path<(String, String)>, state: Data<AppState>) -> HttpResponse {
     if let Err(err) = state.io.act(&state.home, &params.0, ActionType::Toggle) {
-        println!("toggle switch:{} err: {}", &params.0, err);
-        Ok(err.to_string())
+        info!("toggle switch:{} err: {}", &params.0, err);
+        HttpResponse::InternalServerError().json(json!({"err": err.to_string()}))
     } else {
-        println!("toggle switch:{} ok", &params.0);
-        Ok("Ok".to_owned())
+        info!("toggle switch:{} ok", &params.0);
+        HttpResponse::Ok().json(json!({"ok:": "ok"}))
     }
 }
 
-fn switch_hndl((params, state): (Path<(String, String)>, State<AppState>)) -> WebResult<String> {
+async fn switch_hndl(params: Path<(String, String)>, state: Data<AppState>) -> HttpResponse {
     let act_type = match params.1.as_str() {
         "On" => ActionType::On,
         "Off" => ActionType::Off,
-        _ => return Ok("Unknown action type".to_owned()),
+        _ => return HttpResponse::InternalServerError().json(json!({"err":"Unknown action type"})),
     };
 
     if let Err(err) = state.io.act(&state.home, &params.0, act_type) {
-        println!("switch:{} err: {}", &params.0, err);
-        Ok(err.to_string())
+        info!("switch:{} err: {}", &params.0, err);
+        HttpResponse::InternalServerError().json(json!({"err":err.to_string()}))
     } else {
-        println!("switch:{} ok", &params.0);
-        Ok("Ok".to_owned())
+        info!("switch:{} ok", &params.0);
+        HttpResponse::Ok().json(json!({"ok:": "ok"}))
     }
 }
 
-fn update_device(
-    (params, state, value): (Path<String>, State<AppState>, Json<Value>),
-) -> WebResult<String> {
-    println!("update device:{}, value: {:?}", &params, &value);
+async fn update_device(
+    params: Path<String>,
+    state: Data<AppState>,
+    value: Json<Value>,
+) -> HttpResponse {
+    info!("update device:{}, value: {:?}", &params, &value);
     if let Err(err) = state.update_device(&params, value.0) {
-        println!("update device err: {}", err);
-        Ok(err.to_string())
+        info!("update device err: {}", err);
+        HttpResponse::InternalServerError().json(json!({"err": err.to_string()}))
     } else {
-        Ok("Ok".to_owned())
+        HttpResponse::Ok().json(json!({"ok:": "ok"}))
     }
 }
 
-fn devices_list(state: State<AppState>) -> WebResult<Json<Vec<String>>> {
-    Ok(Json(state.devices_list()))
+async fn devices_list(state: Data<AppState>) -> HttpResponse {
+    HttpResponse::Ok().json(state.devices_list())
 }
 
-fn get_device((params, state): (Path<String>, State<AppState>)) -> WebResult<Json<Value>> {
+async fn get_device(params: Path<String>, state: Data<AppState>) -> HttpResponse {
     match state.get_device(&params) {
-        Ok(val) => Ok(Json(val)),
+        Ok(val) => HttpResponse::Ok().json(val),
         Err(err) => {
-            println!("get device err: {}", err);
-            Ok(Json(json!({ "err": err.to_string() })))
+            info!("get device err: {}", err);
+            HttpResponse::InternalServerError().json(json!({ "err": err.to_string() }))
         }
     }
 }
 
 /// 0 - ids (id_1:id_2:id_3)
 /// 1 - base_url (host:port)
-fn reg_device((params, state): (Path<(String, String)>, State<AppState>)) -> WebResult<String> {
-    println!("reg device id:{:?}, ip: {}", &params.0, &params.1);
+async fn reg_device(params: Path<(String, String)>, state: Data<AppState>) -> HttpResponse {
+    info!("reg device id:{:?}, ip: {}", &params.0, &params.1);
     let ids = params
         .0
         .split(':')
@@ -102,19 +93,21 @@ fn reg_device((params, state): (Path<(String, String)>, State<AppState>)) -> Web
     let host = params.1.to_owned();
 
     state.io.reg_web_devices(ids, host);
-    Ok("Ok".to_owned())
+    HttpResponse::Ok().json(json!({"ok:": "ok"}))
 }
 
-fn get_time(_state: State<AppState>) -> WebResult<Json<DateTime<Utc>>> {
-    Ok(Json(Utc::now()))
+async fn get_time(_state: Data<AppState>) -> HttpResponse {
+    HttpResponse::Ok().json(Utc::now())
 }
 
-fn run_script(
-    (params, state, value): (Path<String>, State<AppState>, Json<Value>),
-) -> WebResult<String> {
-    println!("run script:{:?}[{:?}]", &params, value.0);
-    Ok(match state.home.run_script(&params, value.0) {
-        Ok(_) => "Ok".to_string(),
-        Err(err) => err.to_string(),
-    })
+async fn run_script(
+    params: Path<String>,
+    value: Json<Value>,
+    state: Data<AppState>,
+) -> HttpResponse {
+    info!("run script:{:?}[{:?}]", &params, value.0);
+    match state.home.run_script(&params, value.0) {
+        Ok(_) => HttpResponse::Ok().json(json!({"ok:": "ok"})),
+        Err(err) => HttpResponse::InternalServerError().json(json!({ "err": err.to_string() })),
+    }
 }

@@ -1,7 +1,7 @@
-use devices::{SerialSwitch, Switch as SwitchTrait, WebBeam};
-use home::Home;
-use io::IOBuilder;
-use sensors::Switch;
+use crate::devices::{SerialSwitch, Switch as SwitchTrait, WebBeam};
+use crate::home::Home;
+use crate::io::IOBuilder;
+use crate::sensors::Switch;
 use anyhow::Result;
 
 #[derive(Debug)]
@@ -29,12 +29,10 @@ impl LivingRoom {
 
     //beam switch
     fn on_switch_1(home: &Home, is_on: bool) -> Result<()> {
-        home.living_room.beam.switch(is_on);
-        Ok(())
+        home.living_room.beam.switch(is_on)
     }
 
     fn on_switch_2(home: &Home, is_on: bool) -> Result<()> {
-        home.living_room.chandelier.switch(is_on);
-        Ok(())
+        home.living_room.chandelier.switch(is_on)
     }
 }

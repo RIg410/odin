@@ -1,17 +1,17 @@
+use crate::devices::{SerialDimmer, Switch as SwitchTrait, WebBeam};
+use crate::home::script::switch_off_all_switch;
+use crate::home::Home;
+use crate::io::IOBuilder;
+use crate::sensors::Switch;
+use crate::timer::time_ms;
+use anyhow::Result;
 use chrono::{Local, Timelike};
-use devices::{SerialDimmer, Switch as SwitchTrait, WebBeam};
-use home::script::switch_off_all_switch;
-use home::Home;
-use io::IOBuilder;
-use sensors::Switch;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
-use timer::time_ms;
-use anyhow::Result;
 
 #[derive(Debug)]
 pub struct Corridor {
@@ -86,8 +86,7 @@ impl Corridor {
     }
 
     fn on_exit_1(home: &Home, is_on: bool) -> Result<()> {
-        home.corridor.beam.switch(is_on);
-        Ok(())
+        home.corridor.beam.switch(is_on)
     }
 
     fn on_exit_2(home: &Home, _is_on: bool) -> Result<()> {
@@ -107,13 +106,13 @@ impl Corridor {
         }
     }
 
-    fn ir_handler(home: &Home, is_on: bool, sensor_name: SensorName) {
+    fn ir_handler(home: &Home, is_on: bool, sensor_name: SensorName) -> Result<()> {
         if is_on {
             let power = Corridor::calc_power(home, sensor_name);
             home.corridor.lamp.set_power(power);
-            home.corridor.lamp.switch(is_on);
+            home.corridor.lamp.switch(is_on)
         } else {
-            home.corridor.lamp.switch(is_on);
+            home.corridor.lamp.switch(is_on)
         }
     }
 }
@@ -132,8 +131,8 @@ pub struct IrHolder {
 
 impl IrHolder {
     fn new<A>(act: A) -> IrHolder
-        where
-            A: Fn(&Home, bool, SensorName) + Sync + Send + 'static,
+    where
+        A: Fn(&Home, bool, SensorName) -> Result<()> + Sync + Send + 'static,
     {
         let (tx, rx) = channel();
         let is_ir_enable = Arc::new(AtomicBool::new(true));
@@ -142,7 +141,9 @@ impl IrHolder {
             handler: Arc::new(Mutex::new(IrHandler {
                 thread: thread::spawn(move || {
                     IrHolder::ir_loop(rx, is_ir_enable_clone, move |home, is_on, sensor_name| {
-                        act(home, is_on, sensor_name)
+                        if let Err(err) = act(home, is_on, sensor_name) {
+                            error!("Failed to handle ir action: {:?}", err);
+                        }
                     })
                 }),
                 tx,
@@ -160,8 +161,8 @@ impl IrHolder {
     }
 
     fn ir_loop<A>(rx: Receiver<IrMessage>, is_ir_enable: Arc<AtomicBool>, act: A)
-        where
-            A: Fn(&Home, bool, SensorName) + Sync + Send + 'static,
+    where
+        A: Fn(&Home, bool, SensorName) + Sync + Send + 'static,
     {
         let mut off_time = time_ms();
         let mut is_on = false;
@@ -238,11 +239,16 @@ impl IrHolder {
     fn send_msg(&self, home: &Home, _is_on: bool, sensor: SensorName) {
         let time = Local::now();
         if time.hour() > 16 || time.hour() < 10 || sensor == SensorName::FrontDoor {
-            self.handler.lock().unwrap().tx.send(IrMessage {
-                duration: self.calc_duration(&sensor),
-                sensor,
-                home: home.clone(),
-            }).unwrap();
+            self.handler
+                .lock()
+                .unwrap()
+                .tx
+                .send(IrMessage {
+                    duration: self.calc_duration(&sensor),
+                    sensor,
+                    home: home.clone(),
+                })
+                .unwrap();
         }
     }
 }

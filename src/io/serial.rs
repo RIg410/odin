@@ -1,3 +1,4 @@
+use anyhow::{Error, Result};
 use std::{
     io::prelude::*,
     process::Command,
@@ -29,22 +30,22 @@ impl SerialChannel {
         get_port_name().and_then(|p| match uart::open(&p) {
             Ok(mut port) => {
                 if let Err(err) = port.configure(&SETTINGS) {
-                    println!("Failed to config port [{}] {:?}", p, err);
+                    info!("Failed to config port [{}] {:?}", p, err);
                 }
 
                 if let Err(err) = port.set_timeout(Duration::from_secs(1)) {
-                    println!("Failed to set timeout [{}] {:?}", p, err);
+                    info!("Failed to set timeout [{}] {:?}", p, err);
                 }
                 Some(port)
             }
             Err(err) => {
-                println!("Failed to open port.:{:?}", err);
+                info!("Failed to open port.:{:?}", err);
                 None
             }
         })
     }
 
-    pub fn send(&self, cmd: Cmd) -> bool {
+    pub fn send(&self, cmd: Cmd) -> Result<()> {
         if let Ok(mut lock) = self.port.lock() {
             if lock.is_none() {
                 *lock = self.make_port();
@@ -53,22 +54,20 @@ impl SerialChannel {
             if lock.is_some() {
                 let Cmd { _type, id, args } = cmd;
                 if let Err(res) = lock.as_mut().unwrap().write(&[_type, id, args]) {
-                    println!("failed to send {:?}", res);
                     *lock = None;
+                    Err(Error::msg(format!("failed to send {:?}", res)))
                 } else if let Err(res) = lock.as_mut().unwrap().flush() {
-                        println!("failed to flush {:?}", res);
-                        *lock = None;
-                    } else {
-                        return true;
-                    }
-
+                    *lock = None;
+                    Err(Error::msg(format!("failed to flush {:?}", res)))
+                } else {
+                    Ok(())
+                }
             } else {
-                println!("Failed to send cmd. Failed to open port.");
+                Err(Error::msg("Failed to send cmd. Failed to open port."))
             }
         } else {
-            println!("Failed to get SerialChannel lock");
+            Err(Error::msg("Failed to get SerialChannel lock"))
         }
-        false
     }
 }
 

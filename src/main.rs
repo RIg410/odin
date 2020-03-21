@@ -8,8 +8,10 @@ extern crate tokio_core;
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde;
 extern crate anyhow;
+extern crate serde;
+#[macro_use]
+extern crate log;
 
 mod devices;
 mod home;
@@ -22,14 +24,15 @@ use home::Home;
 use io::IO;
 use web::AppState;
 
-fn main() {
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "my_errors=warn,actix_web=warn");
     std::env::set_var("RUST_BACKTRACE", "1");
     env_logger::init();
     dotenv::dotenv().ok();
     let mut io = IO::create_mut();
     let home = Home::new(&mut io);
-    println!("home: {:?}", home);
+    info!("home: {:?}", home);
     let io = io.build();
-    web::start_io(AppState::new(home, io));
+    web::start_io(AppState::new(home, io)).await
 }

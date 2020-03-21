@@ -1,7 +1,8 @@
-use actix_web::{actix, client};
-use futures::future::Future;
+use anyhow::{Error, Result};
+use reqwest::blocking;
 use std::fmt::Write;
-use std::{collections::HashMap, sync::Arc, sync::RwLock, time::Duration};
+use std::time::Duration;
+use std::{collections::HashMap, sync::Arc, sync::RwLock};
 
 #[derive(Debug)]
 pub struct WebChannel {
@@ -32,28 +33,25 @@ impl WebChannel {
         }
     }
 
-    pub fn send(&self, id: &str, args: Vec<String>) {
+    pub fn send(&self, id: &str, args: Vec<String>) -> Result<()> {
         if let Some(host) = self.host(id) {
             let mut url = String::new();
-            write!(url, "http://{}/{}?", &host, id).unwrap();
+            write!(url, "http://{}/{}?", &host, id)?;
             for (i, arg) in args.iter().enumerate() {
-                write!(url, "arg_{}={}&", i, arg).unwrap();
+                write!(url, "arg_{}={}&", i, arg)?;
             }
             url.pop();
 
-            println!("req => {:?}", url);
-            actix::spawn(
-                client::get(url)
-                    .timeout(Duration::new(2, 0))
-                    .finish()
-                    .unwrap()
-                    .send()
-                    .map_err(|_| ())
-                    .and_then(|response| {
-                        println!("resp => {:?}", response);
-                        Ok(())
-                    }),
-            );
+            info!("req => {:?}", url);
+            let resp = blocking::Client::builder()
+                .timeout(Duration::from_secs(10))
+                .build()?
+                .get(&url)
+                .send()?;
+            info!("resp => {:?}", resp);
+            Ok(())
+        } else {
+            Err(Error::msg(format!("Unknown device:{}", id)))
         }
     }
 }

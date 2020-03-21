@@ -1,17 +1,21 @@
 [package]
 name = "home_controller"
 version = "0.1.0"
-authors = ["dyakushev <DYakushev@medlinesoft.ru>"]
+authors = ["dyakushev"]
+edition = "2018"
 
 [dependencies]
-actix-web="0.7.17"
-chrono={ version="0.4.6", features = ["serde"]}
-dotenv="0.13.0"
-env_logger="0.6.2"
-futures="0.1.25"
-serde="1.0.84"
+actix-web = "2.0.0"
+actix-rt = "1"
+log = "0.4"
+reqwest = { version = "0.10.3", features = ["json", "blocking"], default-features = false}
+chrono = { version="0.4.6", features = ["serde"]}
+dotenv = "0.13.0"
+env_logger = "0.6.2"
+futures = "0.1.25"
+serde = "1.0.84"
 serde_derive = "1.0.99"
 serde_json = "1.0.34"
-serial="0.4.0"
-tokio-core="0.1.17"
+serial = "0.4.0"
+tokio-core = "0.1.17"
 anyhow = "1.0.26"

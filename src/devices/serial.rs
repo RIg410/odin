@@ -1,9 +1,9 @@
-use devices::{invert_and_map, map, Control, DeviceType, Flush, Switch};
-use io::{Cmd, IOBuilder, Output, IO};
+use crate::devices::{invert_and_map, map, Control, DeviceType, Flush, Switch};
+use crate::io::{Cmd, IOBuilder, Output, IO};
+use anyhow::Result;
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
-use anyhow::Result;
 
 #[derive(Debug, Clone)]
 pub struct SerialSwitch {
@@ -31,7 +31,7 @@ impl Switch for SerialSwitch {
         self.is_on.load(Ordering::SeqCst)
     }
 
-    fn switch(&self, is_on: bool) {
+    fn switch(&self, is_on: bool) -> Result<()> {
         self.is_on.store(is_on, Ordering::SeqCst);
         self.flush()
     }
@@ -57,20 +57,21 @@ impl Control for SerialSwitch {
 
     fn update(&self, state: Value) -> Result<()> {
         if let Some(is_on) = &state["is_on"].as_bool() {
-            self.switch(is_on.to_owned());
+            self.switch(is_on.to_owned())
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 }
 
 impl Flush for SerialSwitch {
-    fn flush(&self) {
+    fn flush(&self) -> Result<()> {
         let arg = if self.is_on.load(Ordering::SeqCst) {
             0x01
         } else {
             0x02
         };
-        self.io.serial_write(Cmd::new(0x02, self.p_id, arg));
+        self.io.serial_write(Cmd::new(0x02, self.p_id, arg))
     }
 }
 
@@ -118,7 +119,7 @@ impl Switch for SerialDimmer {
         self.state.read().unwrap().is_on
     }
 
-    fn switch(&self, is_on: bool) {
+    fn switch(&self, is_on: bool) -> Result<()> {
         {
             self.state.write().unwrap().is_on = is_on;
         }
@@ -155,9 +156,10 @@ impl Control for SerialDimmer {
         }
 
         if let Some(is_on) = &val["is_on"].as_bool() {
-            self.switch(is_on.to_owned());
+            self.switch(is_on.to_owned())
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 }
 
@@ -168,7 +170,7 @@ struct DimmerState {
 }
 
 impl Flush for SerialDimmer {
-    fn flush(&self) {
+    fn flush(&self) -> Result<()> {
         let state = self.state.read().unwrap();
 
         let arg = if state.is_on {
@@ -183,6 +185,6 @@ impl Flush for SerialDimmer {
             255
         };
 
-        self.io.serial_write(Cmd::new(0x01, self.p_id, arg));
+        self.io.serial_write(Cmd::new(0x01, self.p_id, arg))
     }
 }

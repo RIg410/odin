@@ -1,19 +1,17 @@
-use home::Home;
-use io::serial::SerialChannel;
-use io::web::WebChannel;
-use sensors::{ActionType, Switch};
+use crate::io::serial::SerialChannel;
+use crate::io::web::WebChannel;
+use crate::sensors::{ActionType, Switch};
+use anyhow::{Error, Result};
 use std::collections::HashMap;
 use std::fmt::{Debug, Error as FmtError, Formatter};
 use std::sync::Arc;
-use anyhow::{
-    Result, Error
-};
 
 mod serial;
 mod web;
 
-use devices::Control;
-pub use io::serial::Cmd;
+use crate::devices::Control;
+use crate::home::Home;
+pub use crate::io::serial::Cmd;
 use serde_json::Value;
 
 pub trait Input {
@@ -25,8 +23,8 @@ pub trait Input {
 }
 
 pub trait Output {
-    fn serial_write(&self, cmd: Cmd);
-    fn send(&self, id: &str, args: Vec<String>);
+    fn serial_write(&self, cmd: Cmd) -> Result<()>;
+    fn send(&self, id: &str, args: Vec<String>) -> Result<()>;
 }
 
 #[derive(Clone)]
@@ -54,11 +52,11 @@ impl IO {
 }
 
 impl Output for IO {
-    fn serial_write(&self, cmd: Cmd) {
-        self.serial.send(cmd);
+    fn serial_write(&self, cmd: Cmd) -> Result<()> {
+        self.serial.send(cmd)
     }
 
-    fn send(&self, id: &str, args: Vec<String>) {
+    fn send(&self, id: &str, args: Vec<String>) -> Result<()> {
         self.web.send(id, args)
     }
 }
@@ -149,7 +147,10 @@ impl SensorsHolder {
         if let Some(switch) = self.sensors.get(sensor_name) {
             switch.act(home, action_type)
         } else {
-            Err(Error::msg(format!("Sensor with name '{}' not found.", sensor_name)))
+            Err(Error::msg(format!(
+                "Sensor with name '{}' not found.",
+                sensor_name
+            )))
         }
     }
 }

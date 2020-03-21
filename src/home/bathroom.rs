@@ -1,7 +1,7 @@
-use devices::{SerialDimmer, SerialSwitch, Switch as SwitchTrait, WebSwitch};
-use home::Home;
-use io::IOBuilder;
-use sensors::Switch;
+use crate::devices::{SerialDimmer, SerialSwitch, Switch as SwitchTrait, WebSwitch};
+use crate::home::Home;
+use crate::io::IOBuilder;
+use crate::sensors::Switch;
 use anyhow::Result;
 
 #[derive(Debug)]
@@ -17,7 +17,10 @@ pub struct Bathroom {
 impl Bathroom {
     pub fn new(io: &mut IOBuilder) -> Bathroom {
         let lamp = SerialDimmer::new(io, "bedroom_lamp", 0x01, 20, 100);
-        lamp.switch(false);
+        if let Err(err) = lamp.switch(false) {
+            error!("Failed to switch lamp:{:?}", err);
+        }
+
         Bathroom {
             lamp,
             fun: SerialSwitch::new(io, "bathroom_fun", 0x04),
@@ -29,7 +32,6 @@ impl Bathroom {
     }
 
     fn on_switch(home: &Home, is_on: bool) -> Result<()> {
-        home.bathroom.lamp.switch(is_on);
-        Ok(())
+        home.bathroom.lamp.switch(is_on)
     }
 }

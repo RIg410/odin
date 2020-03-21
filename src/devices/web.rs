@@ -1,9 +1,9 @@
-use devices::{Control, DeviceType, Flush, Switch};
-use io::{IOBuilder, Output, IO};
+use crate::devices::{Control, DeviceType, Flush, Switch};
+use crate::io::{IOBuilder, Output, IO};
+use anyhow::Result;
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
-use anyhow::Result;
 
 pub type Color = (u8, u8, u8);
 pub type SpeedAndBrightness = (u8, u8);
@@ -21,38 +21,38 @@ pub struct Noise {
 }
 
 impl Noise {
-//    pub fn new(hue_start: u8, hue_gap: u8, noise_step: u8) -> Noise {
-//        let mut noise = Self::default();
-//        noise.hue_gap = hue_gap;
-//        noise.noise_step = noise_step;
-//        noise.hue_start = hue_start;
-//        noise
-//    }
-//    pub fn preset_1() -> Noise {
-//        Noise {
-//            hue_start: 0,
-//            hue_gap: 50,
-//            noise_step: 50,
-//            min_bright: 245,
-//            max_bright: 255,
-//            min_sat: 245,
-//            max_sat: 255,
-//            delay: 40,
-//        }
-//    }
-//
-//    pub fn preset_2() -> Noise {
-//        Noise {
-//            hue_start: 180,
-//            hue_gap: 255,
-//            noise_step: 50,
-//            min_bright: 100,
-//            max_bright: 255,
-//            min_sat: 250,
-//            max_sat: 255,
-//            delay: 40,
-//        }
-//    }
+    //    pub fn new(hue_start: u8, hue_gap: u8, noise_step: u8) -> Noise {
+    //        let mut noise = Self::default();
+    //        noise.hue_gap = hue_gap;
+    //        noise.noise_step = noise_step;
+    //        noise.hue_start = hue_start;
+    //        noise
+    //    }
+    //    pub fn preset_1() -> Noise {
+    //        Noise {
+    //            hue_start: 0,
+    //            hue_gap: 50,
+    //            noise_step: 50,
+    //            min_bright: 245,
+    //            max_bright: 255,
+    //            min_sat: 245,
+    //            max_sat: 255,
+    //            delay: 40,
+    //        }
+    //    }
+    //
+    //    pub fn preset_2() -> Noise {
+    //        Noise {
+    //            hue_start: 180,
+    //            hue_gap: 255,
+    //            noise_step: 50,
+    //            min_bright: 100,
+    //            max_bright: 255,
+    //            min_sat: 250,
+    //            max_sat: 255,
+    //            delay: 40,
+    //        }
+    //    }
 }
 
 impl Default for Noise {
@@ -86,7 +86,14 @@ impl LedMode {
             LedMode::Borealis((speed, power)) => format!("borealis:{}:{}", speed, power),
             LedMode::Noise(n) => format!(
                 "noise:{}:{}:{}:{}:{}:{}:{}:{}",
-                n.hue_start, n.hue_gap, n.noise_step, n.min_bright, n.max_bright, n.min_sat, n.max_sat, n.delay
+                n.hue_start,
+                n.hue_gap,
+                n.noise_step,
+                n.min_bright,
+                n.max_bright,
+                n.min_sat,
+                n.max_sat,
+                n.delay
             ),
         }
     }
@@ -183,7 +190,7 @@ impl Switch for WebBeam {
         self.channel_1.read().unwrap().is_on || self.channel_2.read().unwrap().is_on
     }
 
-    fn switch(&self, is_on: bool) {
+    fn switch(&self, is_on: bool) -> Result<()> {
         let args = {
             let mut channel_1 = self.channel_1.write().unwrap();
             let mut channel_2 = self.channel_2.write().unwrap();
@@ -191,7 +198,7 @@ impl Switch for WebBeam {
             channel_2.is_on = is_on;
             vec![channel_1.args(), channel_2.args()]
         };
-        self.io.send(&self.id, args);
+        self.io.send(&self.id, args)
     }
 }
 
@@ -230,7 +237,7 @@ impl Control for WebBeam {
             *self.channel_2.write().unwrap() = state.channel_2;
         }
         if let Some(is_on) = state.is_on {
-            self.switch(is_on);
+            self.switch(is_on)?;
         }
         Ok(())
     }
@@ -261,9 +268,9 @@ impl Switch for WebSwitch {
         self.is_on.load(Ordering::SeqCst)
     }
 
-    fn switch(&self, is_on: bool) {
+    fn switch(&self, is_on: bool) -> Result<()> {
         self.is_on.store(is_on, Ordering::SeqCst);
-        self.flush();
+        self.flush()
     }
 }
 
@@ -284,16 +291,16 @@ impl Control for WebSwitch {
 
     fn update(&self, state: Value) -> Result<()> {
         if let Some(is_on) = &state["is_on"].as_bool() {
-            self.switch(is_on.to_owned());
+            self.switch(is_on.to_owned())?;
         }
         Ok(())
     }
 }
 
 impl Flush for WebSwitch {
-    fn flush(&self) {
+    fn flush(&self) -> Result<()> {
         let is_on = self.is_on.load(Ordering::SeqCst);
         let arg = format!("{}:{}", if is_on { "ON" } else { "OFF" }, 100);
-        self.io.send(&self.id, vec![arg]);
+        self.io.send(&self.id, vec![arg])
     }
 }

@@ -3,17 +3,17 @@ mod web;
 
 pub use self::serial::{SerialDimmer, SerialSwitch};
 pub use self::web::{LedMode, LedState, WebBeam, WebSwitch};
+use anyhow::Result;
 use serde_json::Value;
 use std::fmt::Debug;
-use anyhow::Result;
 
 pub trait Flush {
-    fn flush(&self);
+    fn flush(&self) -> Result<()>;
 }
 
 pub trait Switch {
     fn is_on(&self) -> bool;
-    fn switch(&self, is_on: bool);
+    fn switch(&self, is_on: bool) -> Result<()>;
 }
 
 pub trait Control: Send + Sync + Debug {

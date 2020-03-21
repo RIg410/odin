@@ -7,19 +7,17 @@ mod living_room;
 mod script;
 mod toilet;
 
-pub use home::script::Runner;
+pub use crate::home::script::Runner;
 use std::{collections::HashMap, sync::Arc};
 
-use home::script::Script;
-use home::{
+use crate::home::script::Script;
+use crate::home::{
     bad_room::BadRoom, balcony::Balcony, bathroom::Bathroom, corridor::Corridor, kitchen::Kitchen,
     living_room::LivingRoom, toilet::Toilet,
 };
-use io::IOBuilder;
+use crate::io::IOBuilder;
+use anyhow::{Error, Result};
 use serde_json::Value;
-use anyhow::{
-    Result, Error
-};
 
 #[derive(Debug, Clone)]
 pub struct Home {

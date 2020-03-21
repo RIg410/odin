@@ -1,11 +1,11 @@
-use devices::LedState;
-use devices::Switch as SwitchTrait;
-use home::Home;
-use sensors::ActionType;
+use crate::devices::LedState;
+use crate::devices::Switch as SwitchTrait;
+use crate::home::Home;
+use crate::sensors::ActionType;
+use anyhow::Result;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt::{Debug, Error as FmtError, Formatter};
-use anyhow::Result;
 
 pub trait Runner {
     fn run_script(&self, name: &str, value: Value) -> Result<()>;
@@ -72,8 +72,7 @@ pub fn switch_off_all_switch(home: &Home) -> Result<()> {
     living_room.switch_1.act(home, ActionType::Off)?;
     living_room.switch_2.act(home, ActionType::Off)?;
 
-    living_room.cupboard_lamp.switch(false);
-    Ok(())
+    living_room.cupboard_lamp.switch(false)
 }
 
 fn all_beam(home: &Home, spot: Option<bool>, led: Option<LedState>) {
@@ -95,19 +94,19 @@ fn default_color_scheme(home: &Home, _value: Value) -> Result<()> {
     home.corridor.enable_ir();
 
     if home.bad_room.beam.is_on() {
-        home.bad_room.beam.switch(true);
+        home.bad_room.beam.switch(true)?;
     }
 
     if home.living_room.beam.is_on() {
-        home.living_room.beam.switch(true);
+        home.living_room.beam.switch(true)?;
     }
 
     if home.corridor.beam.is_on() {
-        home.corridor.beam.switch(true);
+        home.corridor.beam.switch(true)?;
     }
 
     if home.kitchen.beam.is_on() {
-        home.kitchen.beam.switch(true);
+        home.kitchen.beam.switch(true)?;
     }
     Ok(())
 }
@@ -120,7 +119,7 @@ fn color_scheme(home: &Home, value: Value) -> Result<()> {
             home.corridor.enable_ir();
         } else {
             home.corridor.disable_ir();
-            home.corridor.lamp.switch(false);
+            home.corridor.lamp.switch(false)?;
         }
     }
 

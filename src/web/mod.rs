@@ -1,8 +1,8 @@
-use home::Home;
-use io::{Input, IO};
+use crate::home::Home;
+use crate::io::{Input, IO};
+use anyhow::Result;
 use serde_json::Value;
 use std::sync::Arc;
-use anyhow::Result;
 mod backend;
 
 #[derive(Clone)]
@@ -32,6 +32,6 @@ impl AppState {
     }
 }
 
-pub fn start_io(app_state: AppState) {
-    backend::run_web_service(app_state);
+pub async fn start_io(app_state: AppState) -> std::io::Result<()> {
+    backend::run_web_service(app_state).await
 }
