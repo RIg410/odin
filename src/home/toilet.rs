@@ -2,7 +2,7 @@ use crate::devices::{SerialDimmer, SerialSwitch, Switch as SwitchTrait};
 use crate::home::Home;
 use crate::io::IOBuilder;
 use crate::sensors::Switch;
-use crate::timer::{time_ms, Timer};
+use crate::timer::{time_ms, Timer, RtTimer};
 use anyhow::Result;
 use std::sync::RwLock;
 use std::time::Duration;
@@ -12,7 +12,7 @@ pub struct Toilet {
     pub lamp: SerialDimmer,
     pub fun: SerialSwitch,
     pub switch: Switch,
-    pub timer: RwLock<Timer>,
+    pub timer: RwLock<RtTimer>,
 }
 
 impl Toilet {
@@ -25,7 +25,7 @@ impl Toilet {
             lamp,
             fun: SerialSwitch::new(io, "toilet_fun", 0x03),
             switch: Switch::new(io, "toilet", Toilet::on_switch),
-            timer: RwLock::new(Timer::new()),
+            timer: RwLock::new(RtTimer::new(io.rt(), false)),
         }
     }
 

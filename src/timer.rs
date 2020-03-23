@@ -1,56 +1,228 @@
+use std::sync::RwLock;
 use std::time::SystemTime;
 use std::{
     sync::{atomic::AtomicBool, atomic::Ordering, Arc},
     thread,
     thread::JoinHandle,
-    time::{Duration, Instant},
+    time::Duration,
 };
+use threadpool::ThreadPool;
+use std::collections::HashMap;
+use serde::export::fmt::Debug;
+use derivative::Derivative;
 
-#[derive(Debug)]
-pub struct Timer {
-    thread: Option<JoinHandle<()>>,
-    active: Option<Arc<AtomicBool>>,
+#[derive(Clone, Debug)]
+pub struct RT {
+    thread: Arc<JoinHandle<()>>,
+    is_run: Arc<AtomicBool>,
+    tasks: Arc<RwLock<Tasks>>,
 }
 
-impl Timer {
-    pub fn new() -> Timer {
-        Timer {
-            thread: None,
-            active: None,
+#[derive(Debug)]
+pub struct Tasks {
+    tasks: HashMap<u128, Task>,
+    next_task: Option<NextTask>,
+    counter: u128,
+}
+
+#[derive(Debug)]
+struct NextTask {
+    task_time: u128,
+    descriptor: u128,
+}
+
+impl Tasks {
+    pub fn empty() -> Tasks {
+        Tasks {
+            tasks: HashMap::new(),
+            next_task: None,
+            counter: 0,
         }
     }
 
-    pub fn after<A>(&mut self, time: Duration, action: A)
-    where
-        A: Fn() + 'static + Send + Sync,
-    {
-        self.reset();
+    pub fn create_task(&mut self, action: Action, interval: Duration, is_async: bool, is_regular: bool) -> u128 {
+        self.counter += 1;
+        let descriptor = self.counter;
+        self.tasks.insert(descriptor, Task::new(interval, action, is_async, is_regular));
+        self.compute_next_task();
+        descriptor
+    }
 
-        let run = Arc::new(AtomicBool::new(true));
-        self.active = Some(run.clone());
-        self.thread = Some(thread::spawn(move || {
-            let start = Instant::now();
-            loop {
-                thread::sleep(Duration::from_millis(100));
-                if start.elapsed() < time {
-                    continue;
-                }
+    pub fn remove_task(&mut self, descriptor: u128) {
+        self.tasks.remove(&descriptor);
+    }
 
-                if !run.load(Ordering::SeqCst) {
-                    return;
-                }
-                action();
-                return;
+    pub fn reset_task_time(&mut self, descriptor: u128) {
+        if let Some(task) = self.tasks.get_mut(&descriptor) {
+            task.last_run = time_ms();
+            self.compute_next_task();
+        }
+    }
+
+    fn run_task(&mut self, task_index: u128, pool: &ThreadPool) {
+        let remove_task = {
+            let task = &mut self.tasks.get_mut(&task_index).unwrap();
+            task.run(pool);
+            !task.is_regular
+        };
+
+        if remove_task {
+            self.tasks.remove(&task_index);
+        }
+
+        self.compute_next_task();
+    }
+
+    fn compute_next_task(&mut self) {
+        let mut next_time = u128::max_value();
+        let mut descriptor = None;
+        for (index, task) in self.tasks.iter() {
+            if next_time > task.next_run() {
+                next_time = task.next_run();
+                descriptor = Some(index);
             }
+        }
+
+        if let Some(descriptor) = descriptor {
+            self.next_task = Some(NextTask { task_time: next_time, descriptor: *descriptor });
+        }
+    }
+}
+
+impl RT {
+    pub fn new(threads_count: usize) -> RT {
+        let is_run = Arc::new(AtomicBool::new(true));
+        let tasks = Arc::new(RwLock::new(Tasks::empty()));
+
+        let is_run_service = is_run.clone();
+        let tasks_service = tasks.clone();
+        let thread = Arc::new(thread::spawn(move || {
+            Self::run(tasks_service, is_run_service, threads_count)
         }));
+
+        RT {
+            thread,
+            is_run,
+            tasks,
+        }
     }
 
-    pub fn reset(&mut self) {
-        match &self.active {
-            Some(run) => run.store(false, Ordering::SeqCst),
-            None => {}
+    pub fn create_task(&self, action: Action, interval: Duration, is_async: bool, is_regular: bool) -> u128 {
+        let mut tasks = self.tasks.write().unwrap();
+        tasks.create_task(action, interval, is_async, is_regular)
+    }
+
+    pub fn remove_task(&self, descriptor: u128) {
+        let mut tasks = self.tasks.write().unwrap();
+        tasks.remove_task(descriptor)
+    }
+
+    pub fn reset_task_time(&self, descriptor: u128) {
+        let mut tasks = self.tasks.write().unwrap();
+        tasks.reset_task_time(descriptor)
+    }
+
+    fn run(tasks: Arc<RwLock<Tasks>>, is_run: Arc<AtomicBool>, threads_count: usize) {
+        let pool = ThreadPool::new(threads_count);
+        while is_run.load(Ordering::Relaxed) {
+            let task_index = {
+                let tasks = tasks.read().unwrap();
+                if let Some(task) = &tasks.next_task {
+                    if task.task_time <= time_ms() {
+                        Some(task.descriptor)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            };
+
+            if let Some(task_index) = task_index {
+                let mut tasks = tasks.write().unwrap();
+                tasks.run_task(task_index, &pool);
+            } else {
+                thread::sleep(Duration::from_millis(500));
+            }
         }
-        self.thread = None;
+    }
+}
+
+pub trait Timer {
+    fn after<A>(&mut self, time: Duration, action: A)
+        where
+            A: Fn() + 'static + Send + Sync;
+    fn reset(&mut self);
+}
+
+pub type Action = Arc<Box<dyn Fn() + Send + Sync + 'static>>;
+
+#[derive(Derivative)]
+#[derivative(Debug)]
+struct Task {
+    last_run: u128,
+    duration: Duration,
+    #[derivative(Debug="ignore")]
+    action: Action,
+    is_async: bool,
+    is_regular: bool,
+}
+
+impl Task {
+    pub fn new(duration: Duration, action: Action, is_async: bool, is_regular: bool) -> Task {
+        Task {
+            last_run: time_ms(),
+            duration,
+            action,
+            is_async,
+            is_regular,
+        }
+    }
+
+    pub fn next_run(&self) -> u128 {
+        self.last_run + self.duration.as_millis()
+    }
+
+    pub fn run(&mut self, pool: &ThreadPool) {
+        if self.is_async {
+            let action = self.action.clone();
+            pool.execute(move || {
+                action.as_ref()();
+            });
+        } else {
+            (self.action)();
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct RtTimer {
+    descriptor: Option<u128>,
+    long_term: bool,
+    rt: RT,
+}
+
+impl RtTimer {
+    pub fn new(rt: &RT, long_term: bool) -> RtTimer {
+        RtTimer {
+            descriptor: None,
+            long_term,
+            rt: rt.clone(),
+        }
+    }
+}
+
+impl Timer for RtTimer {
+    fn after<A>(&mut self, time: Duration, action: A) where
+        A: Fn() + 'static + Send + Sync {
+        self.reset();
+        self.descriptor = Some(self.rt.create_task(Arc::new(Box::new(action)), time, self.long_term, false));
+    }
+
+    fn reset(&mut self) {
+        if let Some(descriptor) = self.descriptor {
+            self.rt.remove_task(descriptor);
+        }
     }
 }
 

@@ -13,6 +13,7 @@ use crate::devices::Control;
 use crate::home::Home;
 pub use crate::io::serial::Cmd;
 use serde_json::Value;
+use crate::timer::RT;
 
 pub trait Input {
     fn update_device(&self, name: &str, value: Value) -> Result<()>;
@@ -33,6 +34,7 @@ pub struct IO {
     web: WebChannel,
     sensors: Option<Arc<SensorsHolder>>,
     devices: Option<Arc<DevicesHolder>>,
+    rt: RT,
 }
 
 impl IO {
@@ -42,6 +44,7 @@ impl IO {
             web: WebChannel::new(),
             sensors: None,
             devices: None,
+            rt: RT::new(2)
         };
         IOBuilder {
             io,
@@ -134,6 +137,10 @@ impl IOBuilder {
 
     pub fn reg_device(&mut self, device: Box<dyn Control>) {
         self.devices.insert(device.id().to_owned(), device);
+    }
+
+    pub fn rt(&self) -> &RT {
+        &self.io.rt
     }
 }
 
