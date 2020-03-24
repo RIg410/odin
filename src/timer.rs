@@ -1,3 +1,6 @@
+use derivative::Derivative;
+use serde::export::fmt::Debug;
+use std::collections::HashMap;
 use std::sync::RwLock;
 use std::time::SystemTime;
 use std::{
@@ -7,9 +10,6 @@ use std::{
     time::Duration,
 };
 use threadpool::ThreadPool;
-use std::collections::HashMap;
-use serde::export::fmt::Debug;
-use derivative::Derivative;
 
 #[derive(Clone, Debug)]
 pub struct RT {
@@ -40,10 +40,19 @@ impl Tasks {
         }
     }
 
-    pub fn create_task(&mut self, action: Action, interval: Duration, is_async: bool, is_regular: bool) -> u128 {
+    pub fn create_task(
+        &mut self,
+        action: Action,
+        interval: Duration,
+        is_async: bool,
+        is_regular: bool,
+    ) -> u128 {
         self.counter += 1;
         let descriptor = self.counter;
-        self.tasks.insert(descriptor, Task::new(interval, action, is_async, is_regular));
+        self.tasks.insert(
+            descriptor,
+            Task::new(interval, action, is_async, is_regular),
+        );
         self.compute_next_task();
         descriptor
     }
@@ -61,9 +70,12 @@ impl Tasks {
 
     fn run_task(&mut self, task_index: u128, pool: &ThreadPool) {
         let remove_task = {
-            let task = &mut self.tasks.get_mut(&task_index).unwrap();
-            task.run(pool);
-            !task.is_regular
+            if let Some(task) = &mut self.tasks.get_mut(&task_index) {
+                task.run(pool);
+                !task.is_regular
+            } else {
+                false
+            }
         };
 
         if remove_task {
@@ -84,7 +96,10 @@ impl Tasks {
         }
 
         if let Some(descriptor) = descriptor {
-            self.next_task = Some(NextTask { task_time: next_time, descriptor: *descriptor });
+            self.next_task = Some(NextTask {
+                task_time: next_time,
+                descriptor: *descriptor,
+            });
         }
     }
 }
@@ -107,7 +122,13 @@ impl RT {
         }
     }
 
-    pub fn create_task(&self, action: Action, interval: Duration, is_async: bool, is_regular: bool) -> u128 {
+    pub fn create_task(
+        &self,
+        action: Action,
+        interval: Duration,
+        is_async: bool,
+        is_regular: bool,
+    ) -> u128 {
         let mut tasks = self.tasks.write().unwrap();
         tasks.create_task(action, interval, is_async, is_regular)
     }
@@ -150,8 +171,8 @@ impl RT {
 
 pub trait Timer {
     fn after<A>(&mut self, time: Duration, action: A)
-        where
-            A: Fn() + 'static + Send + Sync;
+    where
+        A: Fn() + 'static + Send + Sync;
     fn reset(&mut self);
 }
 
@@ -162,7 +183,7 @@ pub type Action = Arc<Box<dyn Fn() + Send + Sync + 'static>>;
 struct Task {
     last_run: u128,
     duration: Duration,
-    #[derivative(Debug="ignore")]
+    #[derivative(Debug = "ignore")]
     action: Action,
     is_async: bool,
     is_regular: bool,
@@ -213,10 +234,16 @@ impl RtTimer {
 }
 
 impl Timer for RtTimer {
-    fn after<A>(&mut self, time: Duration, action: A) where
-        A: Fn() + 'static + Send + Sync {
+    fn after<A>(&mut self, time: Duration, action: A)
+    where
+        A: Fn() + 'static + Send + Sync,
+    {
         self.reset();
-        self.descriptor = Some(self.rt.create_task(Arc::new(Box::new(action)), time, self.long_term, false));
+        self.descriptor =
+            Some(
+                self.rt
+                    .create_task(Arc::new(Box::new(action)), time, self.long_term, false),
+            );
     }
 
     fn reset(&mut self) {
@@ -232,4 +259,30 @@ pub fn time_ms() -> u128 {
         .ok()
         .map(|d| d.as_secs() as u128 * 1000 + d.subsec_millis() as u128)
         .unwrap_or(0)
+}
+
+#[cfg(test)]
+mod test {
+    use crate::timer::{RtTimer, Timer, RT};
+    use std::thread;
+    use std::time::Duration;
+
+    #[test]
+    fn test_timer() {
+        let rt = RT::new(2);
+
+        let thread = thread::current();
+        let mut timer = RtTimer::new(&rt, false);
+        timer.after(Duration::from_secs(1), move || {
+            thread.unpark();
+        });
+        thread::park();
+
+        let thread = thread::current();
+        timer.reset();
+        timer.after(Duration::from_secs(1), move || {
+            thread.unpark();
+        });
+        thread::park();
+    }
 }

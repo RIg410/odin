@@ -57,7 +57,7 @@ impl Corridor {
             ir_sensor_bedroom_door: Switch::new(
                 io,
                 "ir_sensor_bedroom_door",
-                move |home, is_on| ir_bedroom_door.ir_sensor_bedroom_door(home, is_on),
+                move |home, is_on| ir_bedroom_door.ir_sensor_bedroom_door(home, is_on), //todo ignore on light off
             ),
             ir_sensor_middle: Switch::new(io, "ir_sensor_middle", move |home, is_on| {
                 ir_middle.ir_sensor_middle(home, is_on)

@@ -2,7 +2,7 @@ use crate::devices::{SerialDimmer, SerialSwitch, Switch as SwitchTrait};
 use crate::home::Home;
 use crate::io::IOBuilder;
 use crate::sensors::Switch;
-use crate::timer::{time_ms, Timer, RtTimer};
+use crate::timer::{time_ms, RtTimer, Timer};
 use anyhow::Result;
 use std::sync::RwLock;
 use std::time::Duration;

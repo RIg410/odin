@@ -12,8 +12,8 @@ mod web;
 use crate::devices::Control;
 use crate::home::Home;
 pub use crate::io::serial::Cmd;
-use serde_json::Value;
 use crate::timer::RT;
+use serde_json::Value;
 
 pub trait Input {
     fn update_device(&self, name: &str, value: Value) -> Result<()>;
@@ -44,7 +44,7 @@ impl IO {
             web: WebChannel::new(),
             sensors: None,
             devices: None,
-            rt: RT::new(2)
+            rt: RT::new(2),
         };
         IOBuilder {
             io,

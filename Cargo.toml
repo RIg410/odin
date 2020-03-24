@@ -21,3 +21,10 @@ tokio-core = "0.1.17"
 anyhow = "1.0.26"
 threadpool = "1.0"
 derivative = "2.0.2"
+[dependencies.sentry]
+  version = "=0.18.0"
+  features = [
+      "with_log",
+      "with_env_logger",
+      "with_panic"
+  ]

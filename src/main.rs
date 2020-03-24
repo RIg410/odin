@@ -22,14 +22,26 @@ mod web;
 
 use home::Home;
 use io::IO;
+use sentry::integrations::log::LoggerOptions;
+use sentry::{capture_message, Level};
+use sentry::integrations::{env_logger::init, panic::register_panic_handler};
+use std::env;
 use web::AppState;
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-    std::env::set_var("RUST_LOG", "my_errors=warn,actix_web=warn");
-    std::env::set_var("RUST_BACKTRACE", "1");
-    env_logger::init();
     dotenv::dotenv().ok();
+    let _guard = if let Ok(sentry_path) = env::var("SENTRY") {
+        capture_message("Start home controller.", Level::Info);
+        let guard = sentry::init(sentry_path);
+        register_panic_handler();
+        init(None, LoggerOptions::default());
+        Some(guard)
+    } else {
+        env_logger::init();
+        None
+    };
+
     let mut io = IO::create_mut();
     let home = Home::new(&mut io);
     info!("home: {:?}", home);

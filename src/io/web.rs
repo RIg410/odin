@@ -47,7 +47,7 @@ impl WebChannel {
                 .timeout(Duration::from_secs(10))
                 .build()?
                 .get(&url)
-                .send()?;
+                .send();
             info!("resp => {:?}", resp);
             Ok(())
         } else {
