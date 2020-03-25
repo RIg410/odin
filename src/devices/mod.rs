@@ -16,7 +16,7 @@ pub trait Switch {
     fn switch(&self, is_on: bool) -> Result<()>;
 }
 
-pub trait Control: Send + Sync + Debug {
+pub trait Control: Send + Sync + Debug + Flush {
     fn id(&self) -> &str;
     fn dev_type(&self) -> DeviceType;
     fn load(&self) -> Value;

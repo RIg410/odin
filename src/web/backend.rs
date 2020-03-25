@@ -29,7 +29,7 @@ pub async fn run_web_service(state: AppState) -> std::io::Result<()> {
 
 async fn toggle_hndl(params: Path<(String, String)>, state: Data<AppState>) -> HttpResponse {
     if let Err(err) = state.io.act(&state.home, &params.0, ActionType::Toggle) {
-        info!("toggle switch:{} err: {}", &params.0, err);
+        error!("toggle switch:{} err: {}", &params.0, err);
         HttpResponse::InternalServerError().json(json!({"err": err.to_string()}))
     } else {
         info!("toggle switch:{} ok", &params.0);
@@ -45,7 +45,7 @@ async fn switch_hndl(params: Path<(String, String)>, state: Data<AppState>) -> H
     };
 
     if let Err(err) = state.io.act(&state.home, &params.0, act_type) {
-        info!("switch:{} err: {}", &params.0, err);
+        error!("switch:{} err: {}", &params.0, err);
         HttpResponse::InternalServerError().json(json!({"err":err.to_string()}))
     } else {
         info!("switch:{} ok", &params.0);
@@ -60,7 +60,7 @@ async fn update_device(
 ) -> HttpResponse {
     info!("update device:{}, value: {:?}", &params, &value);
     if let Err(err) = state.update_device(&params, value.0) {
-        info!("update device err: {}", err);
+        error!("update device err: {}", err);
         HttpResponse::InternalServerError().json(json!({"err": err.to_string()}))
     } else {
         HttpResponse::Ok().json(json!({"ok:": "ok"}))
@@ -75,7 +75,7 @@ async fn get_device(params: Path<String>, state: Data<AppState>) -> HttpResponse
     match state.get_device(&params) {
         Ok(val) => HttpResponse::Ok().json(val),
         Err(err) => {
-            info!("get device err: {}", err);
+            error!("get device err: {}", err);
             HttpResponse::InternalServerError().json(json!({ "err": err.to_string() }))
         }
     }
@@ -108,6 +108,9 @@ async fn run_script(
     info!("run script:{:?}[{:?}]", &params, value.0);
     match state.home.run_script(&params, value.0) {
         Ok(_) => HttpResponse::Ok().json(json!({"ok:": "ok"})),
-        Err(err) => HttpResponse::InternalServerError().json(json!({ "err": err.to_string() })),
+        Err(err) => {
+            error!("Failed to run script: {:?}", err);
+            HttpResponse::InternalServerError().json(json!({ "err": err.to_string() }))
+        }
     }
 }

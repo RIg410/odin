@@ -3,7 +3,7 @@ use crate::home::script::switch_off_all_switch;
 use crate::home::Home;
 use crate::io::IOBuilder;
 use crate::sensors::Switch;
-use crate::timer::time_ms;
+use crate::runtime::time_ms;
 use anyhow::Result;
 use chrono::{Local, Timelike};
 use std::sync::atomic::{AtomicBool, Ordering};

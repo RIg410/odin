@@ -3,6 +3,7 @@ use crate::home::Home;
 use crate::io::IOBuilder;
 use crate::sensors::Switch;
 use anyhow::Result;
+use crate::log_error;
 
 #[derive(Debug)]
 pub struct Bathroom {
@@ -17,9 +18,7 @@ pub struct Bathroom {
 impl Bathroom {
     pub fn new(io: &mut IOBuilder) -> Bathroom {
         let lamp = SerialDimmer::new(io, "bedroom_lamp", 0x01, 20, 100);
-        if let Err(err) = lamp.switch(false) {
-            error!("Failed to switch lamp:{:?}", err);
-        }
+        log_error!(lamp.switch(false));
 
         Bathroom {
             lamp,

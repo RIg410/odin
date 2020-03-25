@@ -1,3 +1,6 @@
+mod serial;
+mod web;
+
 use crate::io::serial::SerialChannel;
 use crate::io::web::WebChannel;
 use crate::sensors::{ActionType, Switch};
@@ -5,15 +8,13 @@ use anyhow::{Error, Result};
 use std::collections::HashMap;
 use std::fmt::{Debug, Error as FmtError, Formatter};
 use std::sync::Arc;
-
-mod serial;
-mod web;
-
-use crate::devices::Control;
+use crate::log_error;
+use crate::devices::{Control, DeviceType};
 use crate::home::Home;
 pub use crate::io::serial::Cmd;
-use crate::timer::RT;
+use crate::runtime::{Runtime, Background};
 use serde_json::Value;
+use std::time::Duration;
 
 pub trait Input {
     fn update_device(&self, name: &str, value: Value) -> Result<()>;
@@ -34,7 +35,8 @@ pub struct IO {
     web: WebChannel,
     sensors: Option<Arc<SensorsHolder>>,
     devices: Option<Arc<DevicesHolder>>,
-    rt: RT,
+    rt: Runtime,
+    bg: Option<Arc<Vec<Background>>>,
 }
 
 impl IO {
@@ -44,12 +46,37 @@ impl IO {
             web: WebChannel::new(),
             sensors: None,
             devices: None,
-            rt: RT::new(2),
+            rt: Runtime::new(2),
+            bg: None,
         };
+
         IOBuilder {
             io,
             sensors: HashMap::new(),
             devices: HashMap::new(),
+        }
+    }
+
+    fn start_bg(&mut self) {
+        info!("Start background process");
+        let io = self.clone();
+        let bg = vec![
+            Background::every(&self.rt, Duration::from_secs(20), true, move || { io.update_web_devices() }),
+        ];
+        self.bg = Some(Arc::new(bg));
+    }
+
+    fn update_web_devices(&self) {
+        if let Some(holder) = &self.devices {
+            holder.devices().iter()
+                .for_each(|(_, device)| {
+                    match device.dev_type() {
+                        DeviceType::WebBeam => {
+                            log_error!(&device.flush());
+                        }
+                        _ => {}
+                    }
+                });
         }
     }
 }
@@ -128,6 +155,7 @@ impl IOBuilder {
         io.devices = Some(Arc::new(DevicesHolder { devices }));
         io.sensors = Some(Arc::new(SensorsHolder { sensors }));
 
+        io.start_bg();
         io
     }
 
@@ -139,7 +167,7 @@ impl IOBuilder {
         self.devices.insert(device.id().to_owned(), device);
     }
 
-    pub fn rt(&self) -> &RT {
+    pub fn rt(&self) -> &Runtime {
         &self.io.rt
     }
 }
@@ -179,5 +207,9 @@ impl DevicesHolder {
             .get(name)
             .ok_or_else(|| Error::msg(format!("device {} not found", name)))
             .map(|dev| dev.load())
+    }
+
+    pub fn devices(&self) -> &HashMap<String, Box<dyn Control>> {
+        &self.devices
     }
 }

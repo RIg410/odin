@@ -12,7 +12,7 @@ use std::{
 use threadpool::ThreadPool;
 
 #[derive(Clone, Debug)]
-pub struct RT {
+pub struct Runtime {
     thread: Arc<JoinHandle<()>>,
     is_run: Arc<AtomicBool>,
     tasks: Arc<RwLock<Tasks>>,
@@ -104,8 +104,8 @@ impl Tasks {
     }
 }
 
-impl RT {
-    pub fn new(threads_count: usize) -> RT {
+impl Runtime {
+    pub fn new(threads_count: usize) -> Runtime {
         let is_run = Arc::new(AtomicBool::new(true));
         let tasks = Arc::new(RwLock::new(Tasks::empty()));
 
@@ -115,7 +115,7 @@ impl RT {
             Self::run(tasks_service, is_run_service, threads_count)
         }));
 
-        RT {
+        Runtime {
             thread,
             is_run,
             tasks,
@@ -169,13 +169,6 @@ impl RT {
     }
 }
 
-pub trait Timer {
-    fn after<A>(&mut self, time: Duration, action: A)
-    where
-        A: Fn() + 'static + Send + Sync;
-    fn reset(&mut self);
-}
-
 pub type Action = Arc<Box<dyn Fn() + Send + Sync + 'static>>;
 
 #[derive(Derivative)]
@@ -205,6 +198,10 @@ impl Task {
     }
 
     pub fn run(&mut self, pool: &ThreadPool) {
+        if self.is_regular {
+            self.last_run = time_ms();
+        }
+
         if self.is_async {
             let action = self.action.clone();
             pool.execute(move || {
@@ -220,25 +217,23 @@ impl Task {
 pub struct RtTimer {
     descriptor: Option<u128>,
     long_term: bool,
-    rt: RT,
+    rt: Runtime,
 }
 
 impl RtTimer {
-    pub fn new(rt: &RT, long_term: bool) -> RtTimer {
+    pub fn new(rt: &Runtime, long_term: bool) -> RtTimer {
         RtTimer {
             descriptor: None,
             long_term,
             rt: rt.clone(),
         }
     }
-}
 
-impl Timer for RtTimer {
-    fn after<A>(&mut self, time: Duration, action: A)
-    where
-        A: Fn() + 'static + Send + Sync,
+    pub fn after<A>(&mut self, time: Duration, action: A)
+        where
+            A: Fn() + 'static + Send + Sync,
     {
-        self.reset();
+        self.stop();
         self.descriptor =
             Some(
                 self.rt
@@ -246,10 +241,48 @@ impl Timer for RtTimer {
             );
     }
 
-    fn reset(&mut self) {
+    pub fn stop(&self) {
         if let Some(descriptor) = self.descriptor {
             self.rt.remove_task(descriptor);
         }
+    }
+}
+
+impl Drop for RtTimer {
+    fn drop(&mut self) {
+        self.stop();
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Background {
+    descriptor: Option<u128>,
+    rt: Runtime,
+}
+
+impl Background {
+    pub fn every<A>(rt: &Runtime, time: Duration, long_term: bool, action: A) -> Background
+        where
+            A: Fn() + 'static + Send + Sync {
+        let descriptor =
+            Some(rt.create_task(Arc::new(Box::new(action)), time, long_term, true));
+
+        Background {
+            descriptor,
+            rt: rt.clone(),
+        }
+    }
+
+    pub fn stop(&self) {
+        if let Some(descriptor) = self.descriptor {
+            self.rt.remove_task(descriptor);
+        }
+    }
+}
+
+impl Drop for Background {
+    fn drop(&mut self) {
+        self.stop();
     }
 }
 
@@ -263,13 +296,13 @@ pub fn time_ms() -> u128 {
 
 #[cfg(test)]
 mod test {
-    use crate::timer::{RtTimer, Timer, RT};
     use std::thread;
     use std::time::Duration;
+    use crate::runtime::{RtTimer, Runtime};
 
     #[test]
     fn test_timer() {
-        let rt = RT::new(2);
+        let rt = Runtime::new(2);
 
         let thread = thread::current();
         let mut timer = RtTimer::new(&rt, false);
@@ -279,7 +312,7 @@ mod test {
         thread::park();
 
         let thread = thread::current();
-        timer.reset();
+        timer.stop();
         timer.after(Duration::from_secs(1), move || {
             thread.unpark();
         });

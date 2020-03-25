@@ -17,14 +17,15 @@ mod devices;
 mod home;
 mod io;
 mod sensors;
-mod timer;
+mod runtime;
+mod utils;
 mod web;
 
 use home::Home;
 use io::IO;
 use sentry::integrations::log::LoggerOptions;
-use sentry::{capture_message, Level};
 use sentry::integrations::{env_logger::init, panic::register_panic_handler};
+use sentry::{capture_message, Level};
 use std::env;
 use web::AppState;
 

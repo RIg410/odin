@@ -1,6 +1,7 @@
 use crate::devices::LedState;
 use crate::devices::Switch as SwitchTrait;
 use crate::home::Home;
+use crate::log_error;
 use crate::sensors::ActionType;
 use anyhow::Result;
 use serde_json::Value;
@@ -48,31 +49,32 @@ pub fn scripts_map() -> HashMap<String, Script> {
 
 pub fn switch_off_all_switch(home: &Home) -> Result<()> {
     let corridor = &home.corridor;
-    corridor.exit_1.act(home, ActionType::Off)?;
+    log_error!(corridor.exit_1.act(home, ActionType::Off));
 
     let bad_room = &home.bad_room;
-    bad_room.switch_1.act(home, ActionType::Off)?;
-    bad_room.switch_2.act(home, ActionType::Off)?;
+    log_error!(bad_room.switch_1.act(home, ActionType::Off));
+    log_error!(bad_room.switch_2.act(home, ActionType::Off));
 
     let bathroom = &home.bathroom;
-    bathroom.switch.act(home, ActionType::Off)?;
+    log_error!(bathroom.switch.act(home, ActionType::Off));
 
     let toilet = &home.toilet;
-    toilet.switch.act(home, ActionType::Off)?;
+    log_error!(toilet.switch.act(home, ActionType::Off));
 
     let kitchen = &home.kitchen;
-    kitchen.switch_1.act(home, ActionType::Off)?;
-    kitchen.switch_2.act(home, ActionType::Off)?;
+    log_error!(kitchen.switch_1.act(home, ActionType::Off));
+    log_error!(kitchen.switch_2.act(home, ActionType::Off));
 
     let balcony = &home.balcony;
-    balcony.switch_1.act(home, ActionType::Off)?;
-    balcony.switch_2.act(home, ActionType::Off)?;
+    log_error!(balcony.switch_1.act(home, ActionType::Off));
+    log_error!(balcony.switch_2.act(home, ActionType::Off));
 
     let living_room = &home.living_room;
-    living_room.switch_1.act(home, ActionType::Off)?;
-    living_room.switch_2.act(home, ActionType::Off)?;
+    log_error!(living_room.switch_1.act(home, ActionType::Off));
+    log_error!(living_room.switch_2.act(home, ActionType::Off));
 
-    living_room.cupboard_lamp.switch(false)
+    log_error!(living_room.cupboard_lamp.switch(false));
+    Ok(())
 }
 
 fn all_beam(home: &Home, spot: Option<bool>, led: Option<LedState>) {

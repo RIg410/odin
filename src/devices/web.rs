@@ -1,6 +1,6 @@
 use crate::devices::{Control, DeviceType, Flush, Switch};
 use crate::io::{IOBuilder, Output, IO};
-use anyhow::Result;
+use anyhow::{Result, Error};
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
@@ -240,6 +240,17 @@ impl Control for WebBeam {
             self.switch(is_on)?;
         }
         Ok(())
+    }
+}
+
+impl Flush for WebBeam {
+    fn flush(&self) -> Result<(), Error> {
+        let args = {
+            let channel_1 = self.channel_1.read().unwrap();
+            let channel_2 = self.channel_2.read().unwrap();
+            vec![channel_1.args(), channel_2.args()]
+        };
+        self.io.send(&self.id, args)
     }
 }
 
