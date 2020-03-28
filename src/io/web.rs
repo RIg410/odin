@@ -1,4 +1,4 @@
-use anyhow::{Error, Result};
+use anyhow::Result;
 use reqwest::blocking;
 use std::fmt::Write;
 use std::time::Duration;
@@ -48,8 +48,9 @@ impl WebChannel {
                 .send();
             debug!("resp => {:?}", resp);
         } else {
-            Err(Error::msg(format!("Unknown device:{}", id)))
+            debug!("Unknown device:{}", id)
         }
+        Ok(())
     }
 }
 
