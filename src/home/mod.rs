@@ -6,8 +6,9 @@ mod kitchen;
 mod living_room;
 pub(crate) mod scripts;
 mod toilet;
+mod automation;
 
-pub use crate::home::script::Runner;
+pub use automation::BackgroundProcess;
 use std::{collections::HashMap, sync::Arc};
 
 use crate::home::{
@@ -43,8 +44,11 @@ impl Home {
             corridor: Arc::new(Corridor::new(io)),
             toilet: Arc::new(Toilet::new(io)),
             bathroom: Arc::new(Bathroom::new(io)),
-            scripts: Arc::new(script::scripts_map()),
-        }
+            scripts: Arc::new(scripts::scripts()),
+            config: Arc::new(Default::default()),
+        };
+
+        home
     }
 }
 

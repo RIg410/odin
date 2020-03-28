@@ -32,21 +32,19 @@ pub trait Output {
 pub struct IO {
     serial: SerialChannel,
     web: WebChannel,
-    sensors: Option<Arc<SensorsHolder>>,
-    devices: Option<Arc<DevicesHolder>>,
+    sensors: Arc<SensorsHolder>,
+    devices: Arc<DevicesHolder>,
     rt: Runtime,
-    bg: Option<Arc<Vec<Background>>>,
 }
 
 impl IO {
-    pub fn create_mut() -> IOBuilder {
+    pub fn with_runtime(rt: &Runtime) -> IOMut {
         let io = IO {
             serial: SerialChannel::new(),
             web: WebChannel::new(),
-            sensors: None,
-            devices: None,
-            rt: Runtime::new(2),
-            bg: None,
+            sensors: Default::default(),
+            devices: Default::default(),
+            rt: rt.clone(),
         };
 
         IOMut {
@@ -56,30 +54,12 @@ impl IO {
         }
     }
 
-    fn start_bg(&mut self) {
-        info!("Start background process");
-        let io = self.clone();
-        let bg = vec![Background::every(
-            &self.rt,
-            Duration::from_secs(20),
-            true,
-            move || io.update_web_devices(),
-        )];
-        self.bg = Some(Arc::new(bg));
+    pub fn device_holder(&self) -> &DevicesHolder {
+        self.devices.as_ref()
     }
 
-    fn update_web_devices(&self) {
-        if let Some(holder) = &self.devices {
-            holder
-                .devices()
-                .iter()
-                .for_each(|(_, device)| match device.dev_type() {
-                    DeviceType::WebBeam => {
-                        log_error!(&device.flush());
-                    }
-                    _ => {}
-                });
-        }
+    pub fn runtime(&self) -> &Runtime {
+        &self.rt
     }
 }
 
@@ -140,11 +120,8 @@ impl IOMut {
             sensors,
             devices,
         } = self;
-        let mut io = io;
-        io.devices = Some(Arc::new(DevicesHolder { devices }));
-        io.sensors = Some(Arc::new(SensorsHolder { sensors }));
-
-        io.start_bg();
+        io.devices = Arc::new(devices);
+        io.sensors = Arc::new(sensors);
         io
     }
 
@@ -161,7 +138,7 @@ impl IOMut {
     }
 }
 
-#[derive(Clone)]
+#[derive(Default)]
 pub struct SensorsHolder {
     sensors: HashMap<String, Switch>,
 }
@@ -185,6 +162,7 @@ impl AsMut<HashMap<String, Switch>> for SensorsHolder {
     }
 }
 
+#[derive(Default)]
 pub struct DevicesHolder {
     devices: HashMap<String, Box<dyn Control>>,
 }

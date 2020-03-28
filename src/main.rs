@@ -28,6 +28,8 @@ use sentry::integrations::{env_logger::init, panic::register_panic_handler};
 use sentry::{capture_message, Level};
 use std::env;
 use web::AppState;
+use crate::home::BackgroundProcess;
+use crate::runtime::Runtime;
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
@@ -43,9 +45,11 @@ async fn main() -> std::io::Result<()> {
         None
     };
 
-    let mut io = IO::create_mut();
+    let runtime = Runtime::new(2);
+    let mut io = IO::with_runtime(&runtime);
     let home = Home::new(&mut io);
     info!("home: {:?}", home);
-    let io = io.build();
-    web::start_io(AppState::new(home, io)).await
+    let io = io.freeze();
+    let bg = BackgroundProcess::new(&home, &io);
+    web::start_io(AppState::new(home, io, bg)).await
 }

@@ -1,21 +1,24 @@
-use crate::home::Home;
+use crate::home::{Home, BackgroundProcess};
 use crate::io::{Input, IO};
 use anyhow::Result;
 use serde_json::Value;
 use std::sync::Arc;
+
 mod backend;
 
 #[derive(Clone)]
 pub struct AppState {
     pub home: Arc<Home>,
     pub io: IO,
+    bg: BackgroundProcess,
 }
 
 impl AppState {
-    pub fn new(home: Home, io: IO) -> AppState {
+    pub fn new(home: Home, io: IO, bg: BackgroundProcess) -> AppState {
         AppState {
             home: Arc::new(home),
             io,
+            bg,
         }
     }
 
