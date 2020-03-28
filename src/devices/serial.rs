@@ -158,7 +158,7 @@ impl Control for SerialDimmer {
         if let Some(is_on) = &val["is_on"].as_bool() {
             self.switch(is_on.to_owned())
         } else {
-            Ok(())
+            self.flush()
         }
     }
 }

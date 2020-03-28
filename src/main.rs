@@ -16,8 +16,8 @@ extern crate log;
 mod devices;
 mod home;
 mod io;
-mod sensors;
 mod runtime;
+mod sensors;
 mod utils;
 mod web;
 

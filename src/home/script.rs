@@ -78,9 +78,6 @@ pub fn switch_off_all_switch(home: &Home) -> Result<()> {
 }
 
 fn all_beam(home: &Home, spot: Option<bool>, led: Option<LedState>) {
-    home.bad_room.beam.channel_1(spot, led);
-    home.bad_room.beam.channel_2(spot, led);
-
     home.living_room.beam.channel_1(spot, led);
     home.living_room.beam.channel_2(spot, led);
 
@@ -94,10 +91,6 @@ fn all_beam(home: &Home, spot: Option<bool>, led: Option<LedState>) {
 fn default_color_scheme(home: &Home, _value: Value) -> Result<()> {
     all_beam(home, Some(true), Some(LedState::default()));
     home.corridor.enable_ir();
-
-    if home.bad_room.beam.is_on() {
-        home.bad_room.beam.switch(true)?;
-    }
 
     if home.living_room.beam.is_on() {
         home.living_room.beam.switch(true)?;

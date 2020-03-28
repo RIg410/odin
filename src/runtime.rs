@@ -230,8 +230,8 @@ impl RtTimer {
     }
 
     pub fn after<A>(&mut self, time: Duration, action: A)
-        where
-            A: Fn() + 'static + Send + Sync,
+    where
+        A: Fn() + 'static + Send + Sync,
     {
         self.stop();
         self.descriptor =
@@ -262,10 +262,10 @@ pub struct Background {
 
 impl Background {
     pub fn every<A>(rt: &Runtime, time: Duration, long_term: bool, action: A) -> Background
-        where
-            A: Fn() + 'static + Send + Sync {
-        let descriptor =
-            Some(rt.create_task(Arc::new(Box::new(action)), time, long_term, true));
+    where
+        A: Fn() + 'static + Send + Sync,
+    {
+        let descriptor = Some(rt.create_task(Arc::new(Box::new(action)), time, long_term, true));
 
         Background {
             descriptor,
@@ -296,9 +296,9 @@ pub fn time_ms() -> u128 {
 
 #[cfg(test)]
 mod test {
+    use crate::runtime::{RtTimer, Runtime};
     use std::thread;
     use std::time::Duration;
-    use crate::runtime::{RtTimer, Runtime};
 
     #[test]
     fn test_timer() {

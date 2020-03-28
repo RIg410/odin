@@ -44,7 +44,7 @@ impl WebChannel {
 
             info!("req => {:?}", url);
             let resp = blocking::Client::builder()
-                .timeout(Duration::from_secs(10))
+                .timeout(Duration::from_secs(1))
                 .build()?
                 .get(&url)
                 .send();

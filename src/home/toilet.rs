@@ -1,12 +1,12 @@
 use crate::devices::{SerialDimmer, SerialSwitch, Switch as SwitchTrait};
 use crate::home::Home;
 use crate::io::IOBuilder;
-use crate::sensors::Switch;
+use crate::log_error;
 use crate::runtime::{time_ms, RtTimer};
+use crate::sensors::Switch;
 use anyhow::Result;
 use std::sync::RwLock;
 use std::time::Duration;
-use crate::log_error;
 
 #[derive(Debug)]
 pub struct Toilet {

@@ -1,6 +1,7 @@
 use crate::home::Runner;
 use crate::io::Input;
 use crate::sensors::ActionType;
+use crate::web::backend::homebridge::{dimmer_brightness, dimmer_status, dimmer_switch, dimmer_brightness_status};
 use crate::web::AppState;
 use actix_web::web::{Data, Json, Path};
 use actix_web::{web, App, HttpResponse, HttpServer};
@@ -9,17 +10,32 @@ use serde_json::Value;
 
 pub async fn run_web_service(state: AppState) -> std::io::Result<()> {
     HttpServer::new(move || {
-        App::new().data(state.clone()).service(
-            web::scope("/odin/api")
-                .route("switch/{switch}/{state}", web::get().to(toggle_hndl))
-                .route("reg-device/{ids}/{base_url}", web::get().to(reg_device))
-                .route("v1/devices/list", web::get().to(devices_list))
-                .route("v1/device/{device}/update", web::post().to(update_device))
-                .route("v1/device/{device}/info", web::get().to(get_device))
-                .route("v1/switch/{switch}/{state}", web::get().to(switch_hndl))
-                .route("v1/script/{name}", web::post().to(run_script))
-                .route("v1/time", web::get().to(get_time)),
-        )
+        App::new()
+            .data(state.clone())
+            .service(
+                web::scope("/odin/api")
+                    .route("switch/{switch}/{state}", web::get().to(toggle_hndl))
+                    .route("reg-device/{ids}/{base_url}", web::get().to(reg_device))
+                    .route("v1/devices/list", web::get().to(devices_list))
+                    .route("v1/device/{device}/update", web::post().to(update_device))
+                    .route("v1/device/{device}/info", web::get().to(get_device))
+                    .route("v1/switch/{switch}/{state}", web::get().to(switch_hndl))
+                    .route("v1/script/{name}", web::post().to(run_script))
+                    .route("v1/time", web::get().to(get_time)),
+            )
+            .service(
+                web::scope("/homebridge/api")
+                    .route(
+                        "dimmer_switch/{device}/{state}",
+                        web::get().to(dimmer_switch),
+                    )
+                    .route(
+                        "dimmer_brightness/{device}/{state}",
+                        web::get().to(dimmer_brightness),
+                    )
+                    .route("dimmer_status/{device}", web::get().to(dimmer_status))
+                    .route("dimmer_brightness_status/{device}", web::get().to(dimmer_brightness_status)),
+            )
     })
     .bind("0.0.0.0:1884")
     .expect("Can not bind to port 1884")
@@ -111,6 +127,93 @@ async fn run_script(
         Err(err) => {
             error!("Failed to run script: {:?}", err);
             HttpResponse::InternalServerError().json(json!({ "err": err.to_string() }))
+        }
+    }
+}
+
+mod homebridge {
+    use crate::web::AppState;
+    use actix_web::web::{Data, Path};
+    use actix_web::HttpResponse;
+
+    pub async fn dimmer_switch(
+        params: Path<(String, String)>,
+        state: Data<AppState>,
+    ) -> HttpResponse {
+        let is_on = match params.1.as_str() {
+            "On" => true,
+            "Off" => false,
+            _ => {
+                return HttpResponse::InternalServerError()
+                    .json(json!({"err": "Unknown action type"}))
+            }
+        };
+
+        if let Err(err) = state.update_device(&params.0, json!({ "is_on": is_on })) {
+            error!("switch dimmer:{} err: {}", &params.0, err);
+            HttpResponse::InternalServerError().json(json!({"err": err.to_string()}))
+        } else {
+            info!("switch dimmer:{} -> {} ok", params.0, params.1);
+            HttpResponse::Ok().json(json!({"ok:": "ok"}))
+        }
+    }
+
+    pub async fn dimmer_status(name: Path<String>, state: Data<AppState>) -> String {
+        let is_on = state
+            .get_device(&name)
+            .map_err(|err| err.to_string())
+            .and_then(|val| {
+                val.get("is_on")
+                    .and_then(|val| val.as_bool())
+                    .ok_or_else(|| format!("Invalid status object:{}", val))
+            });
+        match is_on {
+            Ok(val) => if val { "1" } else { "0" }.to_owned(),
+            Err(err) => {
+                error!("dimmer_status err: {}", err);
+                format!("dimmer_status err: {}", err)
+            }
+        }
+    }
+
+    pub async fn dimmer_brightness(
+        params: Path<(String, String)>,
+        state: Data<AppState>,
+    ) -> HttpResponse {
+        let res = params
+            .1
+            .parse::<u64>()
+            .map_err(|err| err.to_string())
+            .and_then(|brightness| {
+                state
+                    .update_device(&params.0, json!({ "brightness": brightness }))
+                    .map_err(|err| err.to_string())
+            });
+
+        if let Err(err) = res {
+            error!("dimmer_brightness:{} err: {}", &params.0, err);
+            HttpResponse::InternalServerError().json(json!({"err": err.to_string()}))
+        } else {
+            info!("dimmer_brightness:{} ok", &params.0);
+            HttpResponse::Ok().json(json!({"ok:": "ok"}))
+        }
+    }
+
+    pub async fn dimmer_brightness_status(name: Path<String>, state: Data<AppState>) -> String {
+        let is_on = state
+            .get_device(&name)
+            .map_err(|err| err.to_string())
+            .and_then(|val| {
+                val.get("brightness")
+                    .and_then(|val| val.as_u64())
+                    .ok_or_else(|| format!("Invalid status object:{}", val))
+            });
+        match is_on {
+            Ok(val) => format!("{}", val),
+            Err(err) => {
+                error!("dimmer_status err: {}", err);
+                format!("dimmer_status err: {}", err)
+            }
         }
     }
 }

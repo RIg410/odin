@@ -1,6 +1,6 @@
 use crate::devices::{Control, DeviceType, Flush, Switch};
 use crate::io::{IOBuilder, Output, IO};
-use anyhow::{Result, Error};
+use anyhow::{Error, Result};
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
@@ -105,6 +105,19 @@ pub struct LedState {
     pub mode: LedMode,
 }
 
+impl LedState {
+    fn merge(&mut self, value: &Value) {
+        if let Some(is_on) = value["is_on"].as_bool() {
+            self.is_on = is_on;
+        }
+        if let Some(mode) = value.get("mode") {
+            if let Ok(mode) = serde_json::from_value(mode.clone()) {
+                self.mode = mode;
+            }
+        }
+    }
+}
+
 impl Default for LedState {
     fn default() -> Self {
         LedState {
@@ -144,6 +157,18 @@ impl BeamState {
             "OFF"
         };
         format!("{}:{}:{}", spot_state, led_stat, self.led_state.mode.arg())
+    }
+
+    pub fn merge_state(&mut self, value: &Value) {
+        if let Some(is_on) = value["is_on"].as_bool() {
+            self.is_on = is_on;
+        }
+
+        if let Some(is_spot_on) = value["is_spot_on"].as_bool() {
+            self.is_spot_on = is_spot_on;
+        }
+
+        self.led_state.merge(&value["led_state"]);
     }
 }
 
@@ -204,7 +229,6 @@ impl Switch for WebBeam {
 
 #[derive(Serialize, Deserialize)]
 struct WebBeamState {
-    is_on: Option<bool>,
     channel_1: BeamState,
     channel_2: BeamState,
 }
@@ -223,7 +247,6 @@ impl Control for WebBeam {
 
     fn load(&self) -> Value {
         let state = WebBeamState {
-            is_on: Some(self.is_on()),
             channel_1: self.channel_1.read().unwrap().clone(),
             channel_2: self.channel_2.read().unwrap().clone(),
         };
@@ -231,15 +254,11 @@ impl Control for WebBeam {
     }
 
     fn update(&self, state: Value) -> Result<()> {
-        let state: WebBeamState = serde_json::from_value(state)?;
         {
-            *self.channel_1.write().unwrap() = state.channel_1;
-            *self.channel_2.write().unwrap() = state.channel_2;
+            self.channel_1.write().unwrap().merge_state(&state["channel_1"]);
+            self.channel_2.write().unwrap().merge_state(&state["channel_2"]);
         }
-        if let Some(is_on) = state.is_on {
-            self.switch(is_on)?;
-        }
-        Ok(())
+        self.flush()
     }
 }
 
