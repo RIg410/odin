@@ -1,7 +1,6 @@
 use crate::devices::{SerialDimmer, Switch as SwitchTrait, WebBeam};
-use crate::home::script::switch_off_all_switch;
 use crate::home::Home;
-use crate::io::IOBuilder;
+use crate::io::IOMut;
 use crate::runtime::time_ms;
 use crate::sensors::Switch;
 use anyhow::Result;
@@ -12,6 +11,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
+use crate::home::scripts::{Runner, SWITCH_OFF_ALL};
+use serde_json::Value;
 
 #[derive(Debug)]
 pub struct Corridor {
@@ -30,7 +31,7 @@ pub struct Corridor {
 }
 
 impl Corridor {
-    pub fn new(io: &mut IOBuilder) -> Corridor {
+    pub fn new(io: &mut IOMut) -> Corridor {
         let ir_holder = IrHolder::new(Corridor::ir_handler);
 
         let ir_front_door = ir_holder.clone();
@@ -90,7 +91,7 @@ impl Corridor {
     }
 
     fn on_exit_2(home: &Home, _is_on: bool) -> Result<()> {
-        switch_off_all_switch(home)
+        home.run_script(SWITCH_OFF_ALL, Value::Null)
     }
 
     fn calc_power(_home: &Home, sensor: SensorName) -> u8 {

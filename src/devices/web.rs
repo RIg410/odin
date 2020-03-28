@@ -1,5 +1,5 @@
 use crate::devices::{Control, DeviceType, Flush, Switch};
-use crate::io::{IOBuilder, Output, IO};
+use crate::io::{IOMut, Output, IO};
 use anyhow::{Error, Result};
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -181,7 +181,7 @@ pub struct WebBeam {
 }
 
 impl WebBeam {
-    pub fn new(io: &mut IOBuilder, id: &str) -> WebBeam {
+    pub fn new(io: &mut IOMut, id: &str) -> WebBeam {
         let dev = WebBeam {
             io: io.shared(),
             channel_1: Arc::new(RwLock::new(BeamState {
@@ -281,7 +281,7 @@ pub struct WebSwitch {
 }
 
 impl WebSwitch {
-    pub fn new(io: &mut IOBuilder, id: &str) -> WebSwitch {
+    pub fn new(io: &mut IOMut, id: &str) -> WebSwitch {
         let dev = WebSwitch {
             io: io.shared(),
             id: Arc::new(id.to_owned()),

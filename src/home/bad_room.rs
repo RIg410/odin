@@ -1,8 +1,10 @@
 use crate::devices::{SerialSwitch, Switch as SwitchTrait};
 use crate::home::Home;
-use crate::io::IOBuilder;
+use crate::io::IOMut;
 use crate::sensors::Switch;
 use anyhow::Result;
+use crate::home::scripts::{Runner, SWITCH_OFF_ALL};
+use serde_json::Value;
 
 #[derive(Debug)]
 pub struct BadRoom {
@@ -12,7 +14,7 @@ pub struct BadRoom {
 }
 
 impl BadRoom {
-    pub fn new(io: &mut IOBuilder) -> BadRoom {
+    pub fn new(io: &mut IOMut) -> BadRoom {
         BadRoom {
             chandelier: SerialSwitch::new(io, "bedroom_lamp", 0x01),
             switch_1: Switch::new(io, "bedroom_1", BadRoom::on_switch_1),
@@ -20,9 +22,8 @@ impl BadRoom {
         }
     }
 
-    fn on_switch_1(home: &Home, is_on: bool) -> Result<()> {
-        // switch_off all
-        Ok(())
+    fn on_switch_1(home: &Home, _is_on: bool) -> Result<()> {
+        home.run_script(SWITCH_OFF_ALL, Value::Null)
     }
 
     fn on_switch_2(home: &Home, is_on: bool) -> Result<()> {

@@ -41,15 +41,12 @@ impl WebChannel {
                 write!(url, "arg_{}={}&", i, arg)?;
             }
             url.pop();
-
-            info!("req => {:?}", url);
             let resp = blocking::Client::builder()
                 .timeout(Duration::from_secs(1))
                 .build()?
                 .get(&url)
                 .send();
-            info!("resp => {:?}", resp);
-            Ok(())
+            debug!("resp => {:?}", resp);
         } else {
             Err(Error::msg(format!("Unknown device:{}", id)))
         }

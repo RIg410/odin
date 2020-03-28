@@ -1,20 +1,19 @@
 mod serial;
 mod web;
 
-use crate::devices::{Control, DeviceType};
+use crate::devices::Control;
 use crate::home::Home;
 pub use crate::io::serial::Cmd;
 use crate::io::serial::SerialChannel;
 use crate::io::web::WebChannel;
-use crate::log_error;
-use crate::runtime::{Background, Runtime};
+use crate::runtime::Runtime;
 use crate::sensors::{ActionType, Switch};
 use anyhow::{Error, Result};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt::{Debug, Error as FmtError, Formatter};
 use std::sync::Arc;
-use std::time::Duration;
+use std::collections::hash_map::RandomState;
 
 pub trait Input {
     fn update_device(&self, name: &str, value: Value) -> Result<()>;
@@ -50,10 +49,10 @@ impl IO {
             bg: None,
         };
 
-        IOBuilder {
+        IOMut {
             io,
-            sensors: HashMap::new(),
-            devices: HashMap::new(),
+            sensors: Default::default(),
+            devices: Default::default(),
         }
     }
 
@@ -96,19 +95,11 @@ impl Output for IO {
 
 impl Input for IO {
     fn update_device(&self, name: &str, value: Value) -> Result<()> {
-        if let Some(devices) = &self.devices {
-            devices.update_device(name, value)
-        } else {
-            Err(Error::msg("IO is not initialized"))
-        }
+        self.devices.update_device(name, value)
     }
 
     fn act(&self, home: &Home, sensor_name: &str, action_type: ActionType) -> Result<()> {
-        if let Some(sensors) = &self.sensors {
-            sensors.act(home, sensor_name, action_type)
-        } else {
-            Err(Error::msg("IO is not initialized"))
-        }
+        self.sensors.act(home, sensor_name, action_type)
     }
 
     fn reg_web_devices(&self, ids: Vec<String>, host: String) {
@@ -116,18 +107,13 @@ impl Input for IO {
     }
 
     fn devices_list(&self) -> Vec<String> {
-        self.devices
-            .as_ref()
-            .map(|d| d.devices.keys().map(ToOwned::to_owned).collect())
-            .unwrap_or_default()
+        self.devices.devices().keys()
+            .map(ToOwned::to_owned)
+            .collect()
     }
 
     fn get_device(&self, name: &str) -> Result<Value> {
-        if let Some(devices) = &self.devices {
-            devices.get_device(name)
-        } else {
-            Err(Error::msg("IO is not initialized"))
-        }
+        self.devices.get_device(name)
     }
 }
 
@@ -137,20 +123,20 @@ impl Debug for IO {
     }
 }
 
-pub struct IOBuilder {
+pub struct IOMut {
     io: IO,
-    sensors: HashMap<String, Switch>,
-    devices: HashMap<String, Box<dyn Control>>,
+    sensors: SensorsHolder,
+    devices: DevicesHolder,
 }
 
-impl IOBuilder {
+impl IOMut {
     pub fn shared(&self) -> IO {
         self.io.clone()
     }
 
-    pub fn build(self) -> IO {
-        let IOBuilder {
-            io,
+    pub fn freeze(self) -> IO {
+        let IOMut {
+            mut io,
             sensors,
             devices,
         } = self;
@@ -163,11 +149,11 @@ impl IOBuilder {
     }
 
     pub fn add_sensor(&mut self, switch: Switch) {
-        self.sensors.insert(switch.id.as_str().to_owned(), switch);
+        self.sensors.as_mut().insert(switch.id.as_str().to_owned(), switch);
     }
 
     pub fn reg_device(&mut self, device: Box<dyn Control>) {
-        self.devices.insert(device.id().to_owned(), device);
+        self.devices.as_mut().insert(device.id().to_owned(), device);
     }
 
     pub fn rt(&self) -> &Runtime {
@@ -193,6 +179,12 @@ impl SensorsHolder {
     }
 }
 
+impl AsMut<HashMap<String, Switch>> for SensorsHolder {
+    fn as_mut(&mut self) -> &mut HashMap<String, Switch, RandomState> {
+        &mut self.sensors
+    }
+}
+
 pub struct DevicesHolder {
     devices: HashMap<String, Box<dyn Control>>,
 }
@@ -214,5 +206,11 @@ impl DevicesHolder {
 
     pub fn devices(&self) -> &HashMap<String, Box<dyn Control>> {
         &self.devices
+    }
+}
+
+impl AsMut<HashMap<String, Box<dyn Control>>> for DevicesHolder {
+    fn as_mut(&mut self) -> &mut HashMap<String, Box<dyn Control>, RandomState> {
+        &mut self.devices
     }
 }

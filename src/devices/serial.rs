@@ -1,5 +1,5 @@
 use crate::devices::{invert_and_map, map, Control, DeviceType, Flush, Switch};
-use crate::io::{Cmd, IOBuilder, Output, IO};
+use crate::io::{Cmd, IOMut, Output, IO};
 use anyhow::Result;
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -14,7 +14,7 @@ pub struct SerialSwitch {
 }
 
 impl SerialSwitch {
-    pub fn new(io: &mut IOBuilder, id: &str, p_id: u8) -> SerialSwitch {
+    pub fn new(io: &mut IOMut, id: &str, p_id: u8) -> SerialSwitch {
         let dev = SerialSwitch {
             id: Arc::new(id.to_owned()),
             io: io.shared(),
@@ -87,7 +87,7 @@ pub struct SerialDimmer {
 
 impl SerialDimmer {
     pub fn new(
-        io: &mut IOBuilder,
+        io: &mut IOMut,
         id: &str,
         p_id: u8,
         min_value: u8,

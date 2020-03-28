@@ -1,6 +1,6 @@
 use crate::devices::{SerialDimmer, Switch as SwitchTrait, WebBeam};
 use crate::home::Home;
-use crate::io::IOBuilder;
+use crate::io::IOMut;
 use crate::sensors::Switch;
 use anyhow::Result;
 
@@ -13,7 +13,7 @@ pub struct Kitchen {
 }
 
 impl Kitchen {
-    pub fn new(io: &mut IOBuilder) -> Kitchen {
+    pub fn new(io: &mut IOMut) -> Kitchen {
         Kitchen {
             beam: WebBeam::new(io, "kitchen_beam"),
             kitchen_lamp: SerialDimmer::new(io, "kitchen_lamp", 0x04, 1, 100),

@@ -1,5 +1,5 @@
 use crate::home::Home;
-use crate::io::IOBuilder;
+use crate::io::IOMut;
 use crate::runtime::time_ms;
 use anyhow::Result;
 use std::fmt::{Debug, Error, Formatter};
@@ -31,7 +31,7 @@ pub struct Switch {
 }
 
 impl Switch {
-    pub fn new<A>(io: &mut IOBuilder, id: &str, act: A) -> Switch
+    pub fn new<A>(io: &mut IOMut, id: &str, act: A) -> Switch
     where
         A: Fn(&Home, bool) -> Result<()> + Sync + Send + 'static,
     {

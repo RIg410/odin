@@ -1,6 +1,6 @@
 use crate::devices::{SerialDimmer, SerialSwitch, Switch as SwitchTrait};
 use crate::home::Home;
-use crate::io::IOBuilder;
+use crate::io::IOMut;
 use crate::log_error;
 use crate::runtime::{time_ms, RtTimer};
 use crate::sensors::Switch;
@@ -17,7 +17,7 @@ pub struct Toilet {
 }
 
 impl Toilet {
-    pub fn new(io: &mut IOBuilder) -> Toilet {
+    pub fn new(io: &mut IOMut) -> Toilet {
         let lamp = SerialDimmer::new(io, "toilet_lamp", 0x02, 25, 100);
         let fun = SerialSwitch::new(io, "toilet_fun", 0x03);
         log_error!(lamp.switch(false));

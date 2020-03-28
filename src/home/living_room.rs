@@ -1,6 +1,6 @@
 use crate::devices::{SerialSwitch, Switch as SwitchTrait, WebBeam};
 use crate::home::Home;
-use crate::io::IOBuilder;
+use crate::io::IOMut;
 use crate::sensors::Switch;
 use anyhow::Result;
 
@@ -17,7 +17,7 @@ pub struct LivingRoom {
 }
 
 impl LivingRoom {
-    pub fn new(io: &mut IOBuilder) -> LivingRoom {
+    pub fn new(io: &mut IOMut) -> LivingRoom {
         LivingRoom {
             chandelier: SerialSwitch::new(io, "living_room_lamp", 0x02),
             cupboard_lamp: SerialSwitch::new(io, "cupboard_lamp", 0x06),

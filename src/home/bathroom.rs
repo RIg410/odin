@@ -1,6 +1,6 @@
 use crate::devices::{SerialDimmer, SerialSwitch, Switch as SwitchTrait, WebSwitch};
 use crate::home::Home;
-use crate::io::IOBuilder;
+use crate::io::IOMut;
 use crate::log_error;
 use crate::sensors::Switch;
 use anyhow::Result;
@@ -16,7 +16,7 @@ pub struct Bathroom {
 }
 
 impl Bathroom {
-    pub fn new(io: &mut IOBuilder) -> Bathroom {
+    pub fn new(io: &mut IOMut) -> Bathroom {
         let lamp = SerialDimmer::new(io, "bathroom_lamp", 0x01, 20, 100);
         log_error!(lamp.switch(false));
 
