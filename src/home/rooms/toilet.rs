@@ -26,14 +26,14 @@ impl Toilet {
         Toilet {
             lamp,
             fun,
-            switch: Switch::new(io, "toilet", Toilet::on_switch),
+            switch: Switch::toggle(io, "toilet", Toilet::on_switch),
             timer: RwLock::new(RtTimer::new(io.rt(), false)),
         }
     }
 
-    fn on_switch(home: &Home, is_on: bool) -> Result<()> {
+    fn on_switch(home: &Home) -> Result<()> {
         let toilet = &home.toilet;
-        if is_on {
+        if !toilet.lamp.is_on() {
             toilet.fun.switch(true)?;
             toilet.lamp.switch(true)?;
             toilet.timer.write().unwrap().stop();

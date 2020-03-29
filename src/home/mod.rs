@@ -1,22 +1,22 @@
-pub(crate) mod scripts;
 mod automation;
 pub mod configuration;
 mod rooms;
+pub(crate) mod scripts;
 
-pub use automation::BackgroundProcess;
-use std::{collections::HashMap, sync::Arc};
+use crate::home::configuration::Configuration;
+use crate::home::rooms::bad_room::BadRoom;
+use crate::home::rooms::balcony::Balcony;
+use crate::home::rooms::bathroom::Bathroom;
+use crate::home::rooms::corridor::Corridor;
+use crate::home::rooms::kitchen::Kitchen;
+use crate::home::rooms::living_room::LivingRoom;
+use crate::home::rooms::toilet::Toilet;
+use crate::home::scripts::{Runner, Script};
 use crate::io::IOMut;
 use anyhow::{Error, Result};
+pub use automation::BackgroundProcess;
 use serde_json::Value;
-use crate::home::scripts::{Script, Runner};
-use crate::home::rooms::toilet::Toilet;
-use crate::home::rooms::bathroom::Bathroom;
-use crate::home::rooms::bad_room::BadRoom;
-use crate::home::rooms::living_room::LivingRoom;
-use crate::home::rooms::kitchen::Kitchen;
-use crate::home::rooms::balcony::Balcony;
-use crate::home::rooms::corridor::Corridor;
-use crate::home::configuration::Configuration;
+use std::{collections::HashMap, sync::Arc};
 
 #[derive(Debug, Clone)]
 pub struct Home {

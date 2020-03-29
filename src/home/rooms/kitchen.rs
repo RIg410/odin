@@ -17,17 +17,17 @@ impl Kitchen {
         Kitchen {
             beam: WebBeam::new(io, "kitchen_beam"),
             kitchen_lamp: SerialDimmer::new(io, "kitchen_lamp", 0x04, 1, 100),
-            switch_1: Switch::new(io, "kitchen_1", Kitchen::on_kitchen_switch_1),
-            switch_2: Switch::new(io, "kitchen_2", Kitchen::on_kitchen_switch_2),
+            switch_1: Switch::toggle(io, "kitchen_1", Kitchen::on_kitchen_switch_1),
+            switch_2: Switch::toggle(io, "kitchen_2", Kitchen::on_kitchen_switch_2),
         }
     }
 
-    fn on_kitchen_switch_1(home: &Home, is_on: bool) -> Result<()> {
+    fn on_kitchen_switch_1(home: &Home) -> Result<()> {
         home.kitchen.kitchen_lamp.set_power(100);
-        home.kitchen.kitchen_lamp.switch(is_on)
+        home.kitchen.kitchen_lamp.toggle()
     }
 
-    fn on_kitchen_switch_2(home: &Home, is_on: bool) -> Result<()> {
-        home.kitchen.beam.switch(is_on)
+    fn on_kitchen_switch_2(home: &Home) -> Result<()> {
+        home.kitchen.beam.toggle()
     }
 }

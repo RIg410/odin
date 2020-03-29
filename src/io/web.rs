@@ -1,9 +1,9 @@
 use anyhow::Result;
+use dashmap::DashMap;
 use reqwest::blocking;
 use std::fmt::Write;
-use std::time::Duration;
 use std::sync::Arc;
-use dashmap::DashMap;
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct WebChannel {

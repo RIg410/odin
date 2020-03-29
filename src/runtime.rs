@@ -68,6 +68,13 @@ impl Tasks {
         }
     }
 
+    pub fn update_interval(&mut self, descriptor: u128, interval: Duration) {
+        if let Some(task) = self.tasks.get_mut(&descriptor) {
+            task.duration = interval;
+            self.compute_next_task();
+        }
+    }
+
     fn run_task(&mut self, task_index: u128, pool: &ThreadPool) {
         let remove_task = {
             if let Some(task) = &mut self.tasks.get_mut(&task_index) {
@@ -136,6 +143,11 @@ impl Runtime {
     pub fn remove_task(&self, descriptor: u128) {
         let mut tasks = self.tasks.write().unwrap();
         tasks.remove_task(descriptor)
+    }
+
+    pub fn update_interval(&self, descriptor: u128, interval: Duration) {
+        let mut tasks = self.tasks.write().unwrap();
+        tasks.update_interval(descriptor, interval);
     }
 
     pub fn reset_task_time(&self, descriptor: u128) {
@@ -270,6 +282,12 @@ impl Background {
         Background {
             descriptor,
             rt: rt.clone(),
+        }
+    }
+
+    pub fn update_interval(&self, time: Duration) {
+        if let Some(descriptor) = self.descriptor {
+            self.rt.update_interval(descriptor, time);
         }
     }
 

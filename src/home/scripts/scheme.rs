@@ -1,11 +1,11 @@
-use crate::home::Home;
 use crate::devices::{LedState, Switch};
-use serde_json::Value;
+use crate::home::scripts::switch::SWITCH_OFF_ALL;
+use crate::home::scripts::{Runner, Script};
+use crate::home::Home;
 use crate::sensors::ActionType;
 use anyhow::Result;
+use serde_json::Value;
 use std::collections::HashMap;
-use crate::home::scripts::{Script, Runner};
-use crate::home::scripts::switch::SWITCH_OFF_ALL;
 
 pub fn scheme_scripts(scripts: &mut HashMap<String, Script>) {
     scripts.insert(

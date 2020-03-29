@@ -1,8 +1,9 @@
-use crate::home::{Home, BackgroundProcess};
+use crate::home::{BackgroundProcess, Home};
 use crate::io::{Input, IO};
 use anyhow::Result;
 use serde_json::Value;
 use std::sync::Arc;
+use crate::home::configuration::Configuration;
 
 mod backend;
 
@@ -11,14 +12,16 @@ pub struct AppState {
     pub home: Arc<Home>,
     pub io: IO,
     bg: BackgroundProcess,
+    config: Configuration,
 }
 
 impl AppState {
-    pub fn new(home: Home, io: IO, bg: BackgroundProcess) -> AppState {
+    pub fn new(home: Home, io: IO, bg: BackgroundProcess, config: Configuration) -> AppState {
         AppState {
             home: Arc::new(home),
             io,
             bg,
+            config
         }
     }
 
@@ -32,6 +35,10 @@ impl AppState {
 
     pub fn get_device(&self, name: &str) -> Result<Value> {
         self.io.get_device(name)
+    }
+
+    pub fn get_configuration(&self) -> &Configuration {
+        &self.config
     }
 }
 

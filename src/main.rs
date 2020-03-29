@@ -21,6 +21,9 @@ mod sensors;
 mod utils;
 mod web;
 
+use crate::home::configuration::Configuration;
+use crate::home::BackgroundProcess;
+use crate::runtime::Runtime;
 use home::Home;
 use io::IO;
 use sentry::integrations::log::LoggerOptions;
@@ -28,9 +31,6 @@ use sentry::integrations::{env_logger::init, panic::register_panic_handler};
 use sentry::{capture_message, Level};
 use std::env;
 use web::AppState;
-use crate::home::BackgroundProcess;
-use crate::runtime::Runtime;
-use crate::home::configuration::Configuration;
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
@@ -52,6 +52,6 @@ async fn main() -> std::io::Result<()> {
     let home = Home::new(&mut io, &config);
     info!("home: {:?}", home);
     let io = io.freeze();
-    let bg = BackgroundProcess::new(&home, &io, &config);
-    web::start_io(AppState::new(home, io, bg)).await
+    let bg = BackgroundProcess::new(&home, &io, &config).unwrap();
+    web::start_io(AppState::new(home, io, bg, config)).await
 }

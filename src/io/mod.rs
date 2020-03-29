@@ -10,10 +10,10 @@ use crate::runtime::Runtime;
 use crate::sensors::{ActionType, Switch};
 use anyhow::{Error, Result};
 use serde_json::Value;
+use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
 use std::fmt::{Debug, Error as FmtError, Formatter};
 use std::sync::Arc;
-use std::collections::hash_map::RandomState;
 
 pub trait Input {
     fn update_device(&self, name: &str, value: Value) -> Result<()>;
@@ -87,7 +87,9 @@ impl Input for IO {
     }
 
     fn devices_list(&self) -> Vec<String> {
-        self.devices.devices().keys()
+        self.devices
+            .devices()
+            .keys()
             .map(ToOwned::to_owned)
             .collect()
     }
@@ -126,7 +128,7 @@ impl IOMut {
     }
 
     pub fn add_sensor(&mut self, switch: Switch) {
-        self.sensors.as_mut().insert(switch.id.as_str().to_owned(), switch);
+        self.sensors.as_mut().insert(switch.id().to_owned(), switch);
     }
 
     pub fn reg_device(&mut self, device: Box<dyn Control>) {

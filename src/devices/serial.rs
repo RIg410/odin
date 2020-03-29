@@ -86,13 +86,7 @@ pub struct SerialDimmer {
 }
 
 impl SerialDimmer {
-    pub fn new(
-        io: &mut IOMut,
-        id: &str,
-        p_id: u8,
-        min_value: u8,
-        max_value: u8,
-    ) -> SerialDimmer {
+    pub fn new(io: &mut IOMut, id: &str, p_id: u8, min_value: u8, max_value: u8) -> SerialDimmer {
         let dev = SerialDimmer {
             id: Arc::new(id.to_owned()),
             io: io.shared(),

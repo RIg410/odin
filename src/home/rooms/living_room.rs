@@ -22,17 +22,16 @@ impl LivingRoom {
             chandelier: SerialSwitch::new(io, "living_room_lamp", 0x02),
             cupboard_lamp: SerialSwitch::new(io, "cupboard_lamp", 0x06),
             beam: WebBeam::new(io, "lounge_beam"),
-            switch_1: Switch::new(io, "lounge_1", LivingRoom::on_switch_1),
-            switch_2: Switch::new(io, "lounge_2", LivingRoom::on_switch_2),
+            switch_1: Switch::toggle(io, "lounge_1", LivingRoom::on_switch_1),
+            switch_2: Switch::toggle(io, "lounge_2", LivingRoom::on_switch_2),
         }
     }
 
-    //beam switch
-    fn on_switch_1(home: &Home, is_on: bool) -> Result<()> {
-        home.living_room.beam.switch(is_on)
+    fn on_switch_1(home: &Home) -> Result<()> {
+        home.living_room.beam.toggle()
     }
 
-    fn on_switch_2(home: &Home, is_on: bool) -> Result<()> {
-        home.living_room.chandelier.switch(is_on)
+    fn on_switch_2(home: &Home) -> Result<()> {
+        home.living_room.chandelier.toggle()
     }
 }

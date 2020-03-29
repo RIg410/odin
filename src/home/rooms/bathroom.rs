@@ -26,11 +26,11 @@ impl Bathroom {
             hot_water: WebSwitch::new(io, "hot_water"),
             cold_water: WebSwitch::new(io, "cold_water"),
             return_water: WebSwitch::new(io, "return_water"),
-            switch: Switch::new(io, "bathroom", Bathroom::on_switch),
+            switch: Switch::toggle(io, "bathroom", Bathroom::on_switch),
         }
     }
 
-    fn on_switch(home: &Home, is_on: bool) -> Result<()> {
-        home.bathroom.lamp.switch(is_on)
+    fn on_switch(home: &Home) -> Result<()> {
+        home.bathroom.lamp.toggle()
     }
 }

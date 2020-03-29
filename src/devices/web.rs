@@ -255,8 +255,14 @@ impl Control for WebBeam {
 
     fn update(&self, state: Value) -> Result<()> {
         {
-            self.channel_1.write().unwrap().merge_state(&state["channel_1"]);
-            self.channel_2.write().unwrap().merge_state(&state["channel_2"]);
+            self.channel_1
+                .write()
+                .unwrap()
+                .merge_state(&state["channel_1"]);
+            self.channel_2
+                .write()
+                .unwrap()
+                .merge_state(&state["channel_2"]);
         }
         self.flush()
     }

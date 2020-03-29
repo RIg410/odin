@@ -14,6 +14,9 @@ pub trait Flush {
 pub trait Switch {
     fn is_on(&self) -> bool;
     fn switch(&self, is_on: bool) -> Result<()>;
+    fn toggle(&self) -> Result<()> {
+        self.switch(!self.is_on())
+    }
 }
 
 pub trait Control: Send + Sync + Debug + Flush {

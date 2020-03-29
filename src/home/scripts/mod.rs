@@ -1,14 +1,14 @@
 mod scheme;
 mod switch;
 
-use serde_json::Value;
-use crate::home::Home;
-use std::fmt::{Debug, Formatter};
-use std::collections::HashMap;
-use anyhow::Result;
 use crate::home::scripts::scheme::scheme_scripts;
 use crate::home::scripts::switch::switch_scripts;
+use crate::home::Home;
+use anyhow::Result;
+use serde_json::Value;
+use std::collections::HashMap;
 use std::fmt::Error as FmtError;
+use std::fmt::{Debug, Formatter};
 pub use switch::SWITCH_OFF_ALL;
 
 pub trait Runner {
@@ -21,8 +21,8 @@ pub struct Script {
 
 impl Script {
     fn new<A>(act: A) -> Script
-        where
-            A: Fn(&Home, Value) -> Result<()> + Send + Sync + 'static,
+    where
+        A: Fn(&Home, Value) -> Result<()> + Send + Sync + 'static,
     {
         Script {
             inner: Box::new(act),
@@ -46,4 +46,3 @@ pub fn scripts() -> HashMap<String, Script> {
     switch_scripts(&mut map);
     map
 }
-

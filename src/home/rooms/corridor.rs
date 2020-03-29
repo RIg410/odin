@@ -1,18 +1,18 @@
 use crate::devices::{SerialDimmer, Switch as SwitchTrait, WebBeam};
+use crate::home::scripts::{Runner, SWITCH_OFF_ALL};
 use crate::home::Home;
 use crate::io::IOMut;
 use crate::runtime::time_ms;
 use crate::sensors::Switch;
 use anyhow::Result;
 use chrono::{Local, Timelike};
+use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
-use crate::home::scripts::{Runner, SWITCH_OFF_ALL};
-use serde_json::Value;
 
 #[derive(Debug)]
 pub struct Corridor {
@@ -45,8 +45,9 @@ impl Corridor {
         Corridor {
             lamp: SerialDimmer::new(io, "corridor_lamp", 0x03, 1, 100),
             beam: WebBeam::new(io, "corridor_beam"),
-            exit_1: Switch::new(io, "exit_1", Corridor::on_exit_1),
-            exit_2: Switch::new(io, "exit_2", Corridor::on_exit_2),
+            exit_1: Switch::toggle(io, "exit_1", Corridor::on_exit_1),
+            exit_2: Switch::toggle(io, "exit_2", Corridor::on_exit_2),
+
             ir_sensor_front_door: Switch::new(io, "ir_sensor_front_door", move |home, is_on| {
                 ir_front_door.ir_sensor_front_door(home, is_on)
             }),
@@ -86,11 +87,11 @@ impl Corridor {
         self.ir.disable_ir();
     }
 
-    fn on_exit_1(home: &Home, is_on: bool) -> Result<()> {
-        home.corridor.beam.switch(is_on)
+    fn on_exit_1(home: &Home) -> Result<()> {
+        home.corridor.beam.toggle()
     }
 
-    fn on_exit_2(home: &Home, _is_on: bool) -> Result<()> {
+    fn on_exit_2(home: &Home) -> Result<()> {
         home.run_script(SWITCH_OFF_ALL, Value::Null)
     }
 

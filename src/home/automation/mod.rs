@@ -1,37 +1,38 @@
-use std::sync::Arc;
-use crate::runtime::Background;
-use crate::home::Home;
-use crate::io::IO;
 use crate::home::automation::web_beam_updater::WebBeamUpdater;
 use crate::home::configuration::Configuration;
+use crate::home::Home;
+use crate::io::IO;
+use crate::runtime::Background;
+use anyhow::Error;
+use std::sync::Arc;
 
 pub mod auto_shutdown;
 pub mod web_beam_updater;
 
-fn process() -> Vec<Box<dyn BackgroundBuilder>> {
-    vec![
-        Box::new(WebBeamUpdater()),
-    ]
+fn process(
+    _home: &Home,
+    io: &IO,
+    config: &Configuration,
+) -> Result<Vec<Box<dyn BackgroundBuilder>>, Error> {
+    Ok(vec![Box::new(WebBeamUpdater::new(io, config)?)])
 }
-
 
 #[derive(Clone, Debug)]
 pub struct BackgroundProcess {
-    bg: Arc<Vec<Background>>
+    bg: Arc<Vec<Background>>,
 }
 
 impl BackgroundProcess {
-    pub fn new(home: &Home, io: &IO, config: &Configuration) -> BackgroundProcess {
-        let bg = process().iter()
-            .map(|b| b.build(home, io, config))
+    pub fn new(home: &Home, io: &IO, config: &Configuration) -> Result<BackgroundProcess, Error> {
+        let bg = process(home, io, config)?
+            .into_iter()
+            .map(|mut b| b.build())
             .collect();
 
-        BackgroundProcess {
-            bg: Arc::new(bg)
-        }
+        Ok(BackgroundProcess { bg: Arc::new(bg) })
     }
 }
 
 pub trait BackgroundBuilder {
-    fn build(&self, home: &Home, io: &IO, config: &Configuration) -> Background;
+    fn build(&mut self) -> Background;
 }

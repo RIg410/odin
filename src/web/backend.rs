@@ -1,46 +1,57 @@
+use crate::home::scripts::Runner;
 use crate::io::Input;
 use crate::sensors::ActionType;
-use crate::web::backend::homebridge::{dimmer_brightness, dimmer_status, dimmer_switch, dimmer_brightness_status};
+use crate::web::backend::homebridge::{
+    dimmer_brightness, dimmer_brightness_status, dimmer_status, dimmer_switch,
+};
 use crate::web::AppState;
-use actix_web::web::{Data, Json, Path};
+use actix_web::web::{Data, Json, Path, get, post, scope};
 use actix_web::{web, App, HttpResponse, HttpServer};
 use chrono::Utc;
 use serde_json::Value;
-use crate::home::scripts::Runner;
+use crate::web::backend::configuration::{get_all, get_config};
 
 pub async fn run_web_service(state: AppState) -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .data(state.clone())
             .service(
-                web::scope("/odin/api")
-                    .route("switch/{switch}/{state}", web::get().to(toggle_hndl))
-                    .route("reg-device/{ids}/{base_url}", web::get().to(reg_device))
-                    .route("v1/devices/list", web::get().to(devices_list))
-                    .route("v1/device/{device}/update", web::post().to(update_device))
-                    .route("v1/device/{device}/info", web::get().to(get_device))
-                    .route("v1/switch/{switch}/{state}", web::get().to(switch_hndl))
-                    .route("v1/script/{name}", web::post().to(run_script))
-                    .route("v1/time", web::get().to(get_time)),
+                scope("/odin/api")
+                    .route("switch/{switch}/{state}", get().to(toggle_hndl))
+                    .route("reg-device/{ids}/{base_url}", get().to(reg_device))
+                    .route("v1/devices/list", get().to(devices_list))
+                    .route("v1/device/{device}/update", post().to(update_device))
+                    .route("v1/device/{device}/info", get().to(get_device))
+                    .route("v1/switch/{switch}/{state}", get().to(switch_hndl))
+                    .route("v1/script/{name}", post().to(run_script))
+                    .route("v1/time", get().to(get_time)),
             )
             .service(
-                web::scope("/homebridge/api")
+                scope("/homebridge/api")
                     .route(
                         "dimmer_switch/{device}/{state}",
-                        web::get().to(dimmer_switch),
+                        get().to(dimmer_switch),
                     )
                     .route(
                         "dimmer_brightness/{device}/{state}",
-                        web::get().to(dimmer_brightness),
+                        get().to(dimmer_brightness),
                     )
                     .route("dimmer_status/{device}", web::get().to(dimmer_status))
-                    .route("dimmer_brightness_status/{device}", web::get().to(dimmer_brightness_status)),
+                    .route(
+                        "dimmer_brightness_status/{device}",
+                        get().to(dimmer_brightness_status),
+                    ),
+            )
+            .service(
+                scope("/configuration/api")
+                    .route("get_all", get().to(get_all))
+                    .route("get/{config}", get().to(get_config))
             )
     })
-    .bind("0.0.0.0:1884")
-    .expect("Can not bind to port 1884")
-    .run()
-    .await
+        .bind("0.0.0.0:1884")
+        .expect("Can not bind to port 1884")
+        .run()
+        .await
 }
 
 async fn toggle_hndl(params: Path<(String, String)>, state: Data<AppState>) -> HttpResponse {
@@ -145,7 +156,7 @@ mod homebridge {
             "Off" => false,
             _ => {
                 return HttpResponse::InternalServerError()
-                    .json(json!({"err": "Unknown action type"}))
+                    .json(json!({"err": "Unknown action type"}));
             }
         };
 
@@ -214,6 +225,24 @@ mod homebridge {
                 error!("dimmer_status err: {}", err);
                 format!("dimmer_status err: {}", err)
             }
+        }
+    }
+}
+
+mod configuration {
+    use actix_web::web::{Data, Path};
+    use crate::web::AppState;
+    use actix_web::HttpResponse;
+
+    pub async fn get_all(state: Data<AppState>) -> HttpResponse {
+        HttpResponse::Ok().json(state.get_configuration().get_state())
+    }
+
+    pub async fn get_config(name: Path<String>, state: Data<AppState>) -> HttpResponse {
+        let value = state.get_configuration().get_value(&name);
+        match value {
+            Some(val) => HttpResponse::Ok().json(val),
+            None => HttpResponse::NotFound().body("Config not found"),
         }
     }
 }

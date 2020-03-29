@@ -1,18 +1,15 @@
-use std::collections::HashMap;
+use crate::devices::Switch;
 use crate::home::scripts::Script;
 use crate::home::Home;
+use crate::log_error;
 use anyhow::Result;
 use serde_json::Value;
-use crate::devices::Switch;
-use crate::log_error;
+use std::collections::HashMap;
 
 pub const SWITCH_OFF_ALL: &str = "switch_off_all";
 
 pub fn switch_scripts(scripts: &mut HashMap<String, Script>) {
-    scripts.insert(
-        SWITCH_OFF_ALL.to_owned(),
-        Script::new(switch_off_all),
-    );
+    scripts.insert(SWITCH_OFF_ALL.to_owned(), Script::new(switch_off_all));
 }
 
 pub fn switch_off_all(home: &Home, _value: Value) -> Result<()> {
