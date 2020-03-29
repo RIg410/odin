@@ -5,11 +5,12 @@ use crate::home::Home;
 use std::time::Duration;
 use crate::devices::DeviceType;
 use crate::log_error;
+use crate::home::configuration::Configuration;
 
 pub struct WebBeamUpdater();
 
 impl BackgroundBuilder for WebBeamUpdater {
-    fn build(&self, _home: &Home, io: &IO) -> Background {
+    fn build(&self, _home: &Home, io: &IO, config: &Configuration) -> Background {
         let rt = io.runtime();
         let io = io.clone();
         Background::every(rt, Duration::from_secs(20), true, move || { update_web_devices(&io) })

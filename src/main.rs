@@ -30,6 +30,7 @@ use std::env;
 use web::AppState;
 use crate::home::BackgroundProcess;
 use crate::runtime::Runtime;
+use crate::home::configuration::Configuration;
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
@@ -45,11 +46,12 @@ async fn main() -> std::io::Result<()> {
         None
     };
 
+    let config = Configuration::default();
     let runtime = Runtime::new(2);
     let mut io = IO::with_runtime(&runtime);
-    let home = Home::new(&mut io);
+    let home = Home::new(&mut io, &config);
     info!("home: {:?}", home);
     let io = io.freeze();
-    let bg = BackgroundProcess::new(&home, &io);
+    let bg = BackgroundProcess::new(&home, &io, &config);
     web::start_io(AppState::new(home, io, bg)).await
 }

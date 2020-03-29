@@ -1,25 +1,22 @@
-mod bad_room;
-mod balcony;
-mod bathroom;
-mod corridor;
-mod kitchen;
-mod living_room;
 pub(crate) mod scripts;
-mod toilet;
 mod automation;
+pub mod configuration;
+mod rooms;
 
 pub use automation::BackgroundProcess;
 use std::{collections::HashMap, sync::Arc};
-
-use crate::home::{
-    bad_room::BadRoom, balcony::Balcony, bathroom::Bathroom, corridor::Corridor, kitchen::Kitchen,
-    living_room::LivingRoom, toilet::Toilet,
-};
 use crate::io::IOMut;
 use anyhow::{Error, Result};
 use serde_json::Value;
 use crate::home::scripts::{Script, Runner};
-use serde::de::DeserializeOwned;
+use crate::home::rooms::toilet::Toilet;
+use crate::home::rooms::bathroom::Bathroom;
+use crate::home::rooms::bad_room::BadRoom;
+use crate::home::rooms::living_room::LivingRoom;
+use crate::home::rooms::kitchen::Kitchen;
+use crate::home::rooms::balcony::Balcony;
+use crate::home::rooms::corridor::Corridor;
+use crate::home::configuration::Configuration;
 
 #[derive(Debug, Clone)]
 pub struct Home {
@@ -31,11 +28,10 @@ pub struct Home {
     pub toilet: Arc<Toilet>,
     pub bathroom: Arc<Bathroom>,
     pub scripts: Arc<HashMap<String, Script>>,
-    pub config: Arc<HashMap<String, Value>>,
 }
 
 impl Home {
-    pub fn new(io: &mut IOMut) -> Home {
+    pub fn new(io: &mut IOMut, config: &Configuration) -> Home {
         let home = Home {
             bad_room: Arc::new(BadRoom::new(io)),
             living_room: Arc::new(LivingRoom::new(io)),
@@ -45,7 +41,6 @@ impl Home {
             toilet: Arc::new(Toilet::new(io)),
             bathroom: Arc::new(Bathroom::new(io)),
             scripts: Arc::new(scripts::scripts()),
-            config: Arc::new(Default::default()),
         };
 
         home
@@ -58,27 +53,5 @@ impl Runner for Home {
             .get(name)
             .ok_or_else(|| Error::msg(format!("Unknown script: {}", name)))
             .and_then(|script| script.run(self, value))
-    }
-}
-
-pub struct Config {
-    inner: HashMap<String, Value>
-}
-
-impl Config {
-    pub fn get<T>(&self, key: &str) -> Option<T> where T: DeserializeOwned {
-        if let Some(val) = self.inner.get(key) {
-            serde_json::from_value(val.clone()).ok()
-        } else {
-            None
-        }
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            inner: Default::default()
-        }
     }
 }

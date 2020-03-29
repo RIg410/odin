@@ -3,6 +3,7 @@ use crate::runtime::Background;
 use crate::home::Home;
 use crate::io::IO;
 use crate::home::automation::web_beam_updater::WebBeamUpdater;
+use crate::home::configuration::Configuration;
 
 pub mod auto_shutdown;
 pub mod web_beam_updater;
@@ -20,9 +21,9 @@ pub struct BackgroundProcess {
 }
 
 impl BackgroundProcess {
-    pub fn new(home: &Home, io: &IO) -> BackgroundProcess {
+    pub fn new(home: &Home, io: &IO, config: &Configuration) -> BackgroundProcess {
         let bg = process().iter()
-            .map(|b| b.build(home, io))
+            .map(|b| b.build(home, io, config))
             .collect();
 
         BackgroundProcess {
@@ -32,5 +33,5 @@ impl BackgroundProcess {
 }
 
 pub trait BackgroundBuilder {
-    fn build(&self, home: &Home, io: &IO) -> Background;
+    fn build(&self, home: &Home, io: &IO, config: &Configuration) -> Background;
 }
