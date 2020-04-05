@@ -5,16 +5,20 @@ use crate::io::IO;
 use crate::runtime::Background;
 use anyhow::Error;
 use std::sync::Arc;
+use crate::home::automation::auto_shutdown::AutoShutdown;
 
 pub mod auto_shutdown;
 pub mod web_beam_updater;
 
 fn process(
-    _home: &Home,
+    home: &Home,
     io: &IO,
     config: &Configuration,
 ) -> Result<Vec<Box<dyn BackgroundBuilder>>, Error> {
-    Ok(vec![Box::new(WebBeamUpdater::new(io, config)?)])
+    Ok(vec![
+        //Box::new(WebBeamUpdater::new(io, config)?),
+        Box::new(AutoShutdown::new(home, io, config)?),
+    ])
 }
 
 #[derive(Clone, Debug)]

@@ -1,6 +1,6 @@
-use crate::devices::{invert_and_map, map, Control, DeviceType, Flush, Switch};
+use crate::devices::{invert_and_map, map, Device, DeviceType, Flush, Switch, State, LastUpdate, Stopwatch};
 use crate::io::{Cmd, IOMut, Output, IO};
-use anyhow::Result;
+use anyhow::{Result, Error};
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
@@ -11,6 +11,7 @@ pub struct SerialSwitch {
     p_id: u8,
     io: IO,
     is_on: Arc<AtomicBool>,
+    last_update: Stopwatch,
 }
 
 impl SerialSwitch {
@@ -20,6 +21,7 @@ impl SerialSwitch {
             io: io.shared(),
             p_id,
             is_on: Arc::new(AtomicBool::new(false)),
+            last_update: Stopwatch::new(),
         };
         io.reg_device(Box::new(dev.clone()));
         dev
@@ -37,18 +39,7 @@ impl Switch for SerialSwitch {
     }
 }
 
-///
-/// State {is_on}
-///
-impl Control for SerialSwitch {
-    fn id(&self) -> &str {
-        self.id.as_str()
-    }
-
-    fn dev_type(&self) -> DeviceType {
-        DeviceType::SerialSwitch
-    }
-
+impl State for SerialSwitch {
     fn load(&self) -> Value {
         json!({
             "is_on": self.is_on.load(Ordering::SeqCst)
@@ -61,6 +52,25 @@ impl Control for SerialSwitch {
         } else {
             Ok(())
         }
+    }
+}
+
+///
+/// State {is_on}
+///
+impl Device for SerialSwitch {
+    fn id(&self) -> &str {
+        self.id.as_str()
+    }
+
+    fn dev_type(&self) -> DeviceType {
+        DeviceType::SerialSwitch
+    }
+}
+
+impl LastUpdate for SerialSwitch {
+    fn last_update(&self) -> u128 {
+        self.last_update.last_update()
     }
 }
 
@@ -83,6 +93,7 @@ pub struct SerialDimmer {
     min_value: u8,
     max_value: u8,
     state: Arc<RwLock<DimmerState>>,
+    last_update: Stopwatch,
 }
 
 impl SerialDimmer {
@@ -97,6 +108,7 @@ impl SerialDimmer {
                 is_on: false,
                 brightness: 100,
             })),
+            last_update: Stopwatch::new(),
         };
         io.reg_device(Box::new(dev.clone()));
 
@@ -122,18 +134,7 @@ impl Switch for SerialDimmer {
     }
 }
 
-///
-/// State {is_on, brightness}
-///
-impl Control for SerialDimmer {
-    fn id(&self) -> &str {
-        self.id.as_str()
-    }
-
-    fn dev_type(&self) -> DeviceType {
-        DeviceType::SerialDimmer
-    }
-
+impl State for SerialDimmer {
     fn load(&self) -> Value {
         let state = self.state.read().unwrap();
 
@@ -157,6 +158,25 @@ impl Control for SerialDimmer {
     }
 }
 
+impl LastUpdate for SerialDimmer {
+    fn last_update(&self) -> u128 {
+        self.last_update.last_update()
+    }
+}
+
+///
+/// State {is_on, brightness}
+///
+impl Device for SerialDimmer {
+    fn id(&self) -> &str {
+        self.id.as_str()
+    }
+
+    fn dev_type(&self) -> DeviceType {
+        DeviceType::SerialDimmer
+    }
+}
+
 #[derive(Debug)]
 struct DimmerState {
     is_on: bool,
@@ -165,6 +185,8 @@ struct DimmerState {
 
 impl Flush for SerialDimmer {
     fn flush(&self) -> Result<()> {
+        self.last_update.reset();
+
         let state = self.state.read().unwrap();
 
         let arg = if state.is_on {

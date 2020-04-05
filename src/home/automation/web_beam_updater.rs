@@ -7,6 +7,8 @@ use crate::runtime::{Background, Runtime};
 use anyhow::Error;
 use serde_json::Value;
 use std::time::Duration;
+use std::sync::{Arc, Mutex};
+use std::rc::Rc;
 
 const WEB_UPDATER: &str = "web_updater";
 
@@ -19,14 +21,15 @@ pub struct WebBeamUpdater {
 
 impl WebBeamUpdater {
     pub fn new(io: &IO, config: &Configuration) -> Result<WebBeamUpdater, Error> {
-        let holder = BgHolder::default();
+        let bg = BgHolder::default();
+
         config.add(
             WEB_UPDATER,
-            ConfigValue::new(Config { interval: INTERVAL.clone() }, holder.clone())?,
+            ConfigValue::new(Config { interval: INTERVAL.clone() }, bg.clone())?,
         );
         Ok(WebBeamUpdater {
             io: io.clone(),
-            bg: holder,
+            bg
         })
     }
 }
@@ -51,26 +54,27 @@ fn update_web_devices(io: &IO) {
 
 #[derive(Default, Clone, Debug)]
 pub struct BgHolder {
-    bg: Option<Background>,
+    bg: Arc<Mutex<Option<Background>>>,
 }
 
 impl BgHolder {
     pub fn run(&mut self, rt: &Runtime, io: &IO) -> Background {
         let io = io.clone();
         let bg = Background::every(rt, INTERVAL.clone(), true, move || update_web_devices(&io));
-        self.bg = Some(bg.clone());
+        *self.bg.lock().unwrap() = Some(bg.clone());
         bg
     }
 }
 
 impl OnUpdate for BgHolder {
-    fn on_update(&self, value: Value) -> Result<(), Error> {
-        let config: Config = serde_json::from_value(value)?;
-        if let Some(bg) = &self.bg {
+    fn on_update(&self, value: Value) -> Result<Value, Error> {
+        let config: Config = serde_json::from_value(value.clone())?;
+        let bg = self.bg.lock().unwrap();
+        if let Some(bg) = bg.as_ref() {
             info!("Update web updater interval: {:?}", config);
             bg.update_interval(config.interval);
         }
-        Ok(())
+        Ok(value)
     }
 }
 

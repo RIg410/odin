@@ -6,6 +6,8 @@ pub use self::web::{LedMode, LedState, WebBeam, WebSwitch};
 use anyhow::Result;
 use serde_json::Value;
 use std::fmt::Debug;
+use std::sync::{Arc, RwLock};
+use crate::runtime::time_ms;
 
 pub trait Flush {
     fn flush(&self) -> Result<()>;
@@ -19,11 +21,18 @@ pub trait Switch {
     }
 }
 
-pub trait Control: Send + Sync + Debug + Flush {
-    fn id(&self) -> &str;
-    fn dev_type(&self) -> DeviceType;
+pub trait State {
     fn load(&self) -> Value;
     fn update(&self, state: Value) -> Result<()>;
+}
+
+pub trait LastUpdate {
+    fn last_update(&self) -> u128;
+}
+
+pub trait Device: Send + Sync + Debug + Flush + State + Switch + LastUpdate {
+    fn id(&self) -> &str;
+    fn dev_type(&self) -> DeviceType;
 }
 
 pub enum DeviceType {
@@ -31,6 +40,29 @@ pub enum DeviceType {
     SerialDimmer,
     WebBeam,
     WebSwitch,
+}
+
+#[derive(Clone, Debug)]
+pub struct Stopwatch {
+    time: Arc<RwLock<u128>>,
+}
+
+impl Stopwatch {
+    pub fn new() -> Stopwatch {
+        Stopwatch {
+            time: Arc::new(RwLock::new(time_ms()))
+        }
+    }
+
+    pub fn reset(&self) {
+        *self.time.write().unwrap() = time_ms();
+    }
+}
+
+impl LastUpdate for Stopwatch {
+    fn last_update(&self) -> u128 {
+        *self.time.read().unwrap()
+    }
 }
 
 #[inline]

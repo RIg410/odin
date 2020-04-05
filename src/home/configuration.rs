@@ -25,6 +25,14 @@ impl Configuration {
     pub fn get_value(&self, key: &str) -> Option<Value> {
         self.inner.get(key).map(|v| v.value.clone())
     }
+
+    pub fn set_value(&self, key: &str, value: Value) -> Result<Value, Error> {
+        if let Some(mut val) = self.inner.get_mut(key) {
+            val.update(value)
+        } else {
+            Err(Error::msg("Config not found"))
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -44,8 +52,14 @@ impl ConfigValue {
             on_update: Box::new(on_update),
         })
     }
+
+    pub fn update(&mut self, new_value: Value) -> Result<Value, Error> {
+        let value = self.on_update.on_update(new_value.clone())?;
+        self.value = value.clone();
+        Ok(value)
+    }
 }
 
 pub trait OnUpdate: Debug + Send + Sync + 'static {
-    fn on_update(&self, value: Value) -> Result<(), Error>;
+    fn on_update(&self, value: Value) -> Result<Value, Error>;
 }

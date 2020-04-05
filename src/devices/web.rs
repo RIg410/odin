@@ -1,4 +1,4 @@
-use crate::devices::{Control, DeviceType, Flush, Switch};
+use crate::devices::{Device, DeviceType, Flush, Switch, State, Stopwatch, LastUpdate};
 use crate::io::{IOMut, Output, IO};
 use anyhow::{Error, Result};
 use serde_json::Value;
@@ -178,6 +178,7 @@ pub struct WebBeam {
     io: IO,
     channel_1: Arc<RwLock<BeamState>>,
     channel_2: Arc<RwLock<BeamState>>,
+    last_update: Stopwatch,
 }
 
 impl WebBeam {
@@ -195,6 +196,7 @@ impl WebBeam {
                 led_state: LedState::default(),
                 is_spot_on: true,
             })),
+            last_update: Stopwatch::new(),
         };
         io.reg_device(Box::new(dev.clone()));
 
@@ -233,18 +235,7 @@ struct WebBeamState {
     channel_2: BeamState,
 }
 
-///
-/// state {is_on, channel_1:"{is_on, is_spot_on, led:"{}"}", channel_2:"{}"}
-///
-impl Control for WebBeam {
-    fn id(&self) -> &str {
-        self.id.as_str()
-    }
-
-    fn dev_type(&self) -> DeviceType {
-        DeviceType::WebBeam
-    }
-
+impl State for WebBeam {
     fn load(&self) -> Value {
         let state = WebBeamState {
             channel_1: self.channel_1.read().unwrap().clone(),
@@ -268,6 +259,25 @@ impl Control for WebBeam {
     }
 }
 
+///
+/// state {is_on, channel_1:"{is_on, is_spot_on, led:"{}"}", channel_2:"{}"}
+///
+impl Device for WebBeam {
+    fn id(&self) -> &str {
+        self.id.as_str()
+    }
+
+    fn dev_type(&self) -> DeviceType {
+        DeviceType::WebBeam
+    }
+}
+
+impl LastUpdate for WebBeam {
+    fn last_update(&self) -> u128 {
+        self.last_update.last_update()
+    }
+}
+
 impl Flush for WebBeam {
     fn flush(&self) -> Result<(), Error> {
         let args = {
@@ -275,6 +285,7 @@ impl Flush for WebBeam {
             let channel_2 = self.channel_2.read().unwrap();
             vec![channel_1.args(), channel_2.args()]
         };
+        self.last_update.reset();
         self.io.send(&self.id, args)
     }
 }
@@ -284,6 +295,7 @@ pub struct WebSwitch {
     id: Arc<String>,
     io: IO,
     is_on: Arc<AtomicBool>,
+    last_update: Stopwatch,
 }
 
 impl WebSwitch {
@@ -292,6 +304,7 @@ impl WebSwitch {
             io: io.shared(),
             id: Arc::new(id.to_owned()),
             is_on: Arc::new(AtomicBool::new(false)),
+            last_update: Stopwatch::new(),
         };
         io.reg_device(Box::new(dev.clone()));
 
@@ -310,15 +323,7 @@ impl Switch for WebSwitch {
     }
 }
 
-impl Control for WebSwitch {
-    fn id(&self) -> &str {
-        self.id.as_str()
-    }
-
-    fn dev_type(&self) -> DeviceType {
-        DeviceType::WebSwitch
-    }
-
+impl State for WebSwitch {
     fn load(&self) -> Value {
         json!({
             "is_on": self.is_on.load(Ordering::SeqCst)
@@ -333,10 +338,27 @@ impl Control for WebSwitch {
     }
 }
 
+impl LastUpdate for WebSwitch {
+    fn last_update(&self) -> u128 {
+        self.last_update.last_update()
+    }
+}
+
+impl Device for WebSwitch {
+    fn id(&self) -> &str {
+        self.id.as_str()
+    }
+
+    fn dev_type(&self) -> DeviceType {
+        DeviceType::WebSwitch
+    }
+}
+
 impl Flush for WebSwitch {
     fn flush(&self) -> Result<()> {
         let is_on = self.is_on.load(Ordering::SeqCst);
         let arg = format!("{}:{}", if is_on { "ON" } else { "OFF" }, 100);
+        self.last_update.reset();
         self.io.send(&self.id, vec![arg])
     }
 }

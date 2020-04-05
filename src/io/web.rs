@@ -44,7 +44,7 @@ impl WebChannel {
                 .timeout(Duration::from_secs(1))
                 .build()?
                 .get(&url)
-                .send();
+                .send()?;
             debug!("resp => {:?}", resp);
         } else {
             debug!("Unknown device:{}", id)

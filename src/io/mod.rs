@@ -1,7 +1,7 @@
 mod serial;
 mod web;
 
-use crate::devices::Control;
+use crate::devices::Device;
 use crate::home::Home;
 pub use crate::io::serial::Cmd;
 use crate::io::serial::SerialChannel;
@@ -131,7 +131,7 @@ impl IOMut {
         self.sensors.as_mut().insert(switch.id().to_owned(), switch);
     }
 
-    pub fn reg_device(&mut self, device: Box<dyn Control>) {
+    pub fn reg_device(&mut self, device: Box<dyn Device>) {
         self.devices.as_mut().insert(device.id().to_owned(), device);
     }
 
@@ -166,7 +166,7 @@ impl AsMut<HashMap<String, Switch>> for SensorsHolder {
 
 #[derive(Default)]
 pub struct DevicesHolder {
-    devices: HashMap<String, Box<dyn Control>>,
+    devices: HashMap<String, Box<dyn Device>>,
 }
 
 impl DevicesHolder {
@@ -184,13 +184,13 @@ impl DevicesHolder {
             .map(|dev| dev.load())
     }
 
-    pub fn devices(&self) -> &HashMap<String, Box<dyn Control>> {
+    pub fn devices(&self) -> &HashMap<String, Box<dyn Device>> {
         &self.devices
     }
 }
 
-impl AsMut<HashMap<String, Box<dyn Control>>> for DevicesHolder {
-    fn as_mut(&mut self) -> &mut HashMap<String, Box<dyn Control>, RandomState> {
+impl AsMut<HashMap<String, Box<dyn Device>>> for DevicesHolder {
+    fn as_mut(&mut self) -> &mut HashMap<String, Box<dyn Device>, RandomState> {
         &mut self.devices
     }
 }

@@ -9,7 +9,7 @@ use actix_web::web::{Data, Json, Path, get, post, scope};
 use actix_web::{web, App, HttpResponse, HttpServer};
 use chrono::Utc;
 use serde_json::Value;
-use crate::web::backend::configuration::{get_all, get_config};
+use crate::web::backend::configuration::{get_all, get_config, set_config};
 
 pub async fn run_web_service(state: AppState) -> std::io::Result<()> {
     HttpServer::new(move || {
@@ -46,6 +46,7 @@ pub async fn run_web_service(state: AppState) -> std::io::Result<()> {
                 scope("/configuration/api")
                     .route("get_all", get().to(get_all))
                     .route("get/{config}", get().to(get_config))
+                    .route("set/{config}", post().to(set_config))
             )
     })
         .bind("0.0.0.0:1884")
@@ -230,9 +231,10 @@ mod homebridge {
 }
 
 mod configuration {
-    use actix_web::web::{Data, Path};
+    use actix_web::web::{Data, Path, Json};
     use crate::web::AppState;
     use actix_web::HttpResponse;
+    use serde_json::Value;
 
     pub async fn get_all(state: Data<AppState>) -> HttpResponse {
         HttpResponse::Ok().json(state.get_configuration().get_state())
@@ -243,6 +245,13 @@ mod configuration {
         match value {
             Some(val) => HttpResponse::Ok().json(val),
             None => HttpResponse::NotFound().body("Config not found"),
+        }
+    }
+    pub async fn set_config(name: Path<String>, value: Json<Value>, state: Data<AppState>) -> HttpResponse {
+        let result = state.get_configuration().set_value(&name, value.0);
+        match result {
+            Ok(val) => HttpResponse::Ok().json(val),
+            Err(err) => HttpResponse::InternalServerError().json(json!({"err": err.to_string()})),
         }
     }
 }
