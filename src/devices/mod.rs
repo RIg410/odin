@@ -3,11 +3,11 @@ mod web;
 
 pub use self::serial::{SerialDimmer, SerialSwitch};
 pub use self::web::{LedMode, LedState, WebBeam, WebSwitch};
+use crate::runtime::time_ms;
 use anyhow::Result;
 use serde_json::Value;
 use std::fmt::Debug;
 use std::sync::{Arc, RwLock};
-use crate::runtime::time_ms;
 
 pub trait Flush {
     fn flush(&self) -> Result<()>;
@@ -50,7 +50,7 @@ pub struct Stopwatch {
 impl Stopwatch {
     pub fn new() -> Stopwatch {
         Stopwatch {
-            time: Arc::new(RwLock::new(time_ms()))
+            time: Arc::new(RwLock::new(time_ms())),
         }
     }
 

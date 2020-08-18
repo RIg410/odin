@@ -46,7 +46,7 @@ async fn main() -> std::io::Result<()> {
         None
     };
 
-    let config = Configuration::default();
+    let config = Configuration::new(&env::var("DB").unwrap())?;
     let runtime = Runtime::new(2);
     let mut io = IO::with_runtime(&runtime);
     let home = Home::new(&mut io, &config);

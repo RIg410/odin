@@ -1,9 +1,9 @@
+use crate::home::configuration::Configuration;
 use crate::home::{BackgroundProcess, Home};
 use crate::io::{Input, IO};
 use anyhow::Result;
 use serde_json::Value;
 use std::sync::Arc;
-use crate::home::configuration::Configuration;
 
 mod backend;
 
@@ -21,7 +21,7 @@ impl AppState {
             home: Arc::new(home),
             io,
             bg,
-            config
+            config,
         }
     }
 

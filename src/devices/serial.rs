@@ -1,6 +1,8 @@
-use crate::devices::{invert_and_map, map, Device, DeviceType, Flush, Switch, State, LastUpdate, Stopwatch};
+use crate::devices::{
+    invert_and_map, map, Device, DeviceType, Flush, LastUpdate, State, Stopwatch, Switch,
+};
 use crate::io::{Cmd, IOMut, Output, IO};
-use anyhow::{Result, Error};
+use anyhow::{Error, Result};
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};

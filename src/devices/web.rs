@@ -1,4 +1,4 @@
-use crate::devices::{Device, DeviceType, Flush, Switch, State, Stopwatch, LastUpdate};
+use crate::devices::{Device, DeviceType, Flush, LastUpdate, State, Stopwatch, Switch};
 use crate::io::{IOMut, Output, IO};
 use anyhow::{Error, Result};
 use serde_json::Value;

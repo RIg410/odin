@@ -1,15 +1,15 @@
 use crate::home::scripts::Runner;
 use crate::io::Input;
 use crate::sensors::ActionType;
+use crate::web::backend::configuration::{get_all, get_config, set_config};
 use crate::web::backend::homebridge::{
     dimmer_brightness, dimmer_brightness_status, dimmer_status, dimmer_switch,
 };
 use crate::web::AppState;
-use actix_web::web::{Data, Json, Path, get, post, scope};
+use actix_web::web::{get, post, scope, Data, Json, Path};
 use actix_web::{web, App, HttpResponse, HttpServer};
 use chrono::Utc;
 use serde_json::Value;
-use crate::web::backend::configuration::{get_all, get_config, set_config};
 
 pub async fn run_web_service(state: AppState) -> std::io::Result<()> {
     HttpServer::new(move || {
@@ -28,10 +28,7 @@ pub async fn run_web_service(state: AppState) -> std::io::Result<()> {
             )
             .service(
                 scope("/homebridge/api")
-                    .route(
-                        "dimmer_switch/{device}/{state}",
-                        get().to(dimmer_switch),
-                    )
+                    .route("dimmer_switch/{device}/{state}", get().to(dimmer_switch))
                     .route(
                         "dimmer_brightness/{device}/{state}",
                         get().to(dimmer_brightness),
@@ -46,13 +43,13 @@ pub async fn run_web_service(state: AppState) -> std::io::Result<()> {
                 scope("/configuration/api")
                     .route("get_all", get().to(get_all))
                     .route("get/{config}", get().to(get_config))
-                    .route("set/{config}", post().to(set_config))
+                    .route("set/{config}", post().to(set_config)),
             )
     })
-        .bind("0.0.0.0:1884")
-        .expect("Can not bind to port 1884")
-        .run()
-        .await
+    .bind("0.0.0.0:1884")
+    .expect("Can not bind to port 1884")
+    .run()
+    .await
 }
 
 async fn toggle_hndl(params: Path<(String, String)>, state: Data<AppState>) -> HttpResponse {
@@ -231,23 +228,39 @@ mod homebridge {
 }
 
 mod configuration {
-    use actix_web::web::{Data, Path, Json};
     use crate::web::AppState;
+    use actix_web::web::{Data, Json, Path};
     use actix_web::HttpResponse;
     use serde_json::Value;
 
     pub async fn get_all(state: Data<AppState>) -> HttpResponse {
-        HttpResponse::Ok().json(state.get_configuration().get_state())
+        state
+            .get_configuration()
+            .load_state()
+            .and_then(|val| Ok(HttpResponse::Ok().json(val)))
+            .unwrap_or_else(|err| HttpResponse::InternalServerError().json(err))
     }
 
     pub async fn get_config(name: Path<String>, state: Data<AppState>) -> HttpResponse {
-        let value = state.get_configuration().get_value(&name);
-        match value {
-            Some(val) => HttpResponse::Ok().json(val),
-            None => HttpResponse::NotFound().body("Config not found"),
-        }
+        state
+            .get_configuration()
+            .get_value(&name)
+            .and_then(|val| {
+                Ok(match val {
+                    Some(val) => HttpResponse::Ok().json(val),
+                    None => HttpResponse::NotFound().json(json!({"err": "Config not found"})),
+                })
+            })
+            .unwrap_or_else(|err| {
+                HttpResponse::InternalServerError().json(json!({"err": err.to_string()}))
+            })
     }
-    pub async fn set_config(name: Path<String>, value: Json<Value>, state: Data<AppState>) -> HttpResponse {
+
+    pub async fn set_config(
+        name: Path<String>,
+        value: Json<Value>,
+        state: Data<AppState>,
+    ) -> HttpResponse {
         let result = state.get_configuration().set_value(&name, value.0);
         match result {
             Ok(val) => HttpResponse::Ok().json(val),
